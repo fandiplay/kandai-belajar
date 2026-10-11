@@ -1,6 +1,8 @@
 <!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Belajar AI</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:#fdfcfa;color:#0d1520;max-width:520px;margin:auto;padding:16px}
 .card{border:2px solid #d8d3c8;border-radius:20px;padding:16px;margin:12px 0;background:#fff}.c{text-align:center}
@@ -13,6 +15,10 @@
 .dot.done{background:#0d1520;color:#fff;box-shadow:0 5px 0 #a79bf7}.dot.lock{background:#f1eee8;border-color:#d8d3c8;box-shadow:none;color:#aaa}
 .fb{padding:10px 0}.link{color:#555;text-decoration:underline;cursor:pointer}pre{overflow:auto}
 
+.spacer{height:160px;pointer-events:none;display:block}
+#bd{padding-bottom:160px}
+.math-block{overflow-x:auto;max-width:100%;text-align:center;margin:12px 0}
+.katex{font-size:1.1em}
 /* Navigasi pelajaran + tutor kucing */
 body{padding-bottom:112px}
 .lesson-dots{display:flex;align-items:center;justify-content:center;gap:6px;min-height:16px;margin:12px 0 18px}
@@ -38,6 +44,21 @@ body{padding-bottom:112px}
 <script>
 const $=document.getElementById('app'),g=id=>document.getElementById(id);let token=localStorage.t;
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function renderRich(value,short=false){
+  const original=String(value??'');
+  const normalized=original.replace(/\\\\\[([\\s\\S]*?)\\\\\]/g,'$$$1$$').replace(/\\\\\\(([\\s\\S]*?)\\\\\\)/g,'$$$1$$');
+  const formulas=[];
+  const tokenized=normalized.replace(/\\$\\$([\\s\\S]+?)\\$\\$|\\$([^$\\n]+?)\\$/g,(whole,display,inline)=>{
+    const formula=display??inline,isDisplay=display!==undefined,token='@@MATH'+formulas.length+'@@';
+    formulas.push({token,formula,isDisplay,original:whole});return token;
+  });
+  let html=short?esc(tokenized):DOMPurify.sanitize(marked.parse(tokenized));
+  for(const item of formulas){let rendered;try{rendered=katex.renderToString(item.formula,{displayMode:item.isDisplay,throwOnError:false})}catch{rendered=esc(item.original)}
+    if(item.isDisplay)rendered='<div class="math-block">'+rendered+'</div>';
+    html=html.split(item.token).join(rendered);
+  }
+  return html;
+}
 async function api(p,body){
   const r=await fetch('/api'+p,{method:body?'POST':'GET',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:body?JSON.stringify(body):undefined});
   const d=await r.json();if(r.status===401&&token){logout();}if(!r.ok)throw new Error(d.error);return d;
@@ -95,7 +116,7 @@ function lesson(id,cid){
         g('ask-answer').textContent='Sedang berpikir...';
         try{
           const r=await api('/lessons/'+id+'/ask',{block_idx:i,question});
-          g('ask-answer').innerHTML=DOMPurify.sanitize(marked.parse(String(r.answer||'')));
+          g('ask-answer').innerHTML=renderRich(r.answer||'');
         }catch(e){g('ask-answer').textContent=e.message||'Maaf, tutor sedang kesulitan menjawab. Coba lagi sebentar ya.'}
         finally{if(g('ask-send')){g('ask-send').disabled=false;g('ask-send').textContent='TANYA'}}
       };
@@ -111,12 +132,12 @@ function lesson(id,cid){
       g('nx').onclick=()=>{i++;show()};
       g('cat-help').onclick=openSheet;
       if(b.type==='text'){
-        g('bd').innerHTML=DOMPurify.sanitize(marked.parse(b.markdown||''));
+        g('bd').innerHTML=renderRich(b.markdown||'')+'<div class="spacer" aria-hidden="true"></div>';
       }else{
-        g('bd').innerHTML=`<h3>${esc(b.question)}</h3>`+(b.options||[]).map((o,k)=>`<button class="opt" data-k="${k}">${esc(o)}</button>`).join('');
+        g('bd').innerHTML=`<h3>${renderRich(b.question,true)}</h3>`+(b.options||[]).map((o,k)=>`<button class="opt" data-k="${k}">${renderRich(o,true)}</button>`).join('')+'<div class="spacer" aria-hidden="true"></div>';
         if(saved){
           g('bd').querySelectorAll('.opt').forEach((o,j)=>{o.disabled=true;if(j===saved.correct)o.classList.add('ok');else if(j===saved.chosen&&!saved.is_correct)o.classList.add('no')});
-          g('fb').innerHTML=`<p class="fb">${saved.is_correct?'✅ Benar!':'❌ Kurang tepat.'} ${esc(saved.explanation||'')}</p>`;
+          g('fb').innerHTML=`<p class="fb" id="feedback-text">${saved.is_correct?'✅ Benar!':'❌ Kurang tepat.'} ${renderRich(saved.explanation||'',true)}</p><div class="spacer" aria-hidden="true"></div>`;
         }else{
           g('bd').querySelectorAll('.opt').forEach(el=>el.onclick=async()=>{
             if(quizAnswers[i])return;
@@ -125,9 +146,10 @@ function lesson(id,cid){
               const r=await api('/lessons/'+id+'/answer',{quiz_idx:i,chosen:k});
               quizAnswers[i]={chosen:k,correct:r.correct,is_correct:!!r.is_correct,explanation:r.explanation||''};
               g('bd').querySelectorAll('.opt').forEach((o,j)=>{if(j===r.correct)o.classList.add('ok');else if(j===k)o.classList.add('no')});
-              g('fb').innerHTML=`<p class="fb">${r.is_correct?'✅ Benar!':'❌ Kurang tepat.'} ${esc(r.explanation||'')}</p>`;
+              g('fb').innerHTML=`<p class="fb" id="feedback-text">${r.is_correct?'✅ Benar!':'❌ Kurang tepat.'} ${renderRich(r.explanation||'',true)}</p><div class="spacer" aria-hidden="true"></div>`;
               g('nx').style.display='block';
               if(!r.is_correct)catShake();
+              g('fb').scrollIntoView({behavior:'smooth',block:'center'});
             }catch(e){g('bd').querySelectorAll('.opt').forEach(o=>o.disabled=false);alert(e.message||'Jawaban gagal dikirim. Coba lagi ya.')}
           });
         }
