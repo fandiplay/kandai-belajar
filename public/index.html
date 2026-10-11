@@ -46,9 +46,9 @@ const $=document.getElementById('app'),g=id=>document.getElementById(id);let tok
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function renderRich(value,short=false){
   const original=String(value??'');
-  const normalized=original.replace(/\\\\\[([\\s\\S]*?)\\\\\]/g,'$$$1$$').replace(/\\\\\\(([\\s\\S]*?)\\\\\\)/g,'$$$1$$');
+  const normalized=original.replace(/\\\[([\s\S]*?)\\\]/g,'$$$$$1$$$$').replace(/\\\(([\s\S]*?)\\\)/g,'$$$$$1$$$$');
   const formulas=[];
-  const tokenized=normalized.replace(/\\$\\$([\\s\\S]+?)\\$\\$|\\$([^$\\n]+?)\\$/g,(whole,display,inline)=>{
+  const tokenized=normalized.replace(/\$\$([\s\S]+?)\$\$|\$([^$\n]+?)\$/g,(whole,display,inline)=>{
     const formula=display??inline,isDisplay=display!==undefined,token='@@MATH'+formulas.length+'@@';
     formulas.push({token,formula,isDisplay,original:whole});return token;
   });
