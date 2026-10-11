@@ -12,6 +12,28 @@
 .dot{width:64px;height:64px;border-radius:50%;border:3px solid #0d1520;background:#fff;font-size:22px;box-shadow:0 5px 0 #0d1520}
 .dot.done{background:#0d1520;color:#fff;box-shadow:0 5px 0 #a79bf7}.dot.lock{background:#f1eee8;border-color:#d8d3c8;box-shadow:none;color:#aaa}
 .fb{padding:10px 0}.link{color:#555;text-decoration:underline;cursor:pointer}pre{overflow:auto}
+
+/* Navigasi pelajaran + tutor kucing */
+body{padding-bottom:112px}
+.lesson-dots{display:flex;align-items:center;justify-content:center;gap:6px;min-height:16px;margin:12px 0 18px}
+.lesson-dot{height:7px;width:7px;border-radius:99px;background:#d8d8df;transition:width .2s,background .2s}
+.lesson-dot.active{width:25px;background:#a79bf7}
+.lesson-nav{position:fixed;z-index:20;bottom:10px;left:50%;transform:translateX(-50%);width:min(calc(100% - 32px),488px);display:flex;gap:10px;padding:8px;background:#fdfcfa;border:2px solid #0d1520;border-radius:18px;box-shadow:0 4px 0 #0d1520}
+.lesson-nav button{margin:0;box-shadow:none;height:52px}
+.lesson-prev{width:58px;flex:0 0 58px;font-size:24px!important;padding:8px!important}
+.lesson-next{flex:1}
+.lesson-nav button:disabled{opacity:.35;box-shadow:none;cursor:not-allowed}
+.cat-bubble{position:fixed;z-index:21;right:max(16px,calc((100vw - 520px)/2 + 16px));bottom:88px;width:110px;height:70px;padding:4px;border:2px solid #0d1520;border-radius:15px;background:#fff;box-shadow:0 3px 0 #0d1520;display:flex;align-items:center;justify-content:center;cursor:pointer;animation:catWiggle 4s ease-in-out infinite;transform-origin:75% 100%}
+.cat-bubble svg{width:100%;height:100%}
+@keyframes catWiggle{0%,88%,100%{transform:rotate(0)}90%{transform:rotate(-4deg)}92%{transform:rotate(4deg)}94%{transform:rotate(-3deg)}96%{transform:rotate(2deg)}98%{transform:rotate(0)}}
+.cat-bubble.shake{animation:catNudge .42s ease-in-out}
+@keyframes catNudge{0%,100%{transform:rotate(0)}25%{transform:rotate(-8deg)}50%{transform:rotate(7deg)}75%{transform:rotate(-4deg)}}
+.ask-overlay{position:fixed;z-index:40;inset:0;background:#0d152077;display:flex;align-items:flex-end;justify-content:center}
+.ask-sheet{width:min(100%,520px);max-height:82dvh;overflow:auto;background:#fff;border:2px solid #0d1520;border-bottom:0;border-radius:24px 24px 0 0;padding:18px 16px calc(20px + env(safe-area-inset-bottom));box-shadow:0 -5px 0 #0d1520}
+.ask-head{display:flex;align-items:center;gap:10px}.ask-head h3{flex:1;margin:0}.ask-close{border:2px solid #0d1520;border-radius:10px;background:#fff;font-size:22px;width:40px;height:40px}
+.ask-sheet textarea{resize:vertical;min-height:84px;max-height:150px;margin-top:14px}
+.ask-answer{overflow-wrap:anywhere;line-height:1.55}.ask-answer:empty{display:none}
+.ask-answer p:first-child{margin-top:0}
 </style></head><body><div id="app"></div>
 <script>
 const $=document.getElementById('app'),g=id=>document.getElementById(id);let token=localStorage.t;
@@ -50,22 +72,68 @@ function lesson(id,cid){
   $.innerHTML='<p class="c">Menyiapkan materi, tunggu sebentar...</p>';
   api('/lessons/'+id+'/open',{}).then(L=>{
     let i=0;
+    const quizAnswers={};
+    let sheetOpen=false;
+    const finish=()=>api('/lessons/'+id+'/complete',{}).then(r=>{
+      $.innerHTML=`<div class="card c"><h2>Selesai! 🎉</h2><p>Skor kuis: ${r.score}/${r.total}</p><button class="btn" id="b">KEMBALI</button></div>`;
+      g('b').onclick=()=>course(cid);
+    }).catch(e=>alert(e.message));
+    const catSvg=`<svg viewBox="0 0 120 72" role="img" aria-label="Kucing bingung"><path d="M72 18 Q75 5 86 8 L96 19 Q105 18 111 28 L113 42 Q110 54 94 56 L54 56 Q38 55 33 45 Q28 35 38 29 L50 25 L57 13 Q61 8 66 17 Z" fill="#0d1520"/><path d="M81 17 L86 12 L91 20" fill="#fff"/><path d="M48 33 Q54 28 59 34 M70 33 Q76 28 81 34" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/><path d="M62 40 Q66 44 70 40" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/><path d="M38 48 Q25 53 18 47 Q13 43 17 39" fill="none" stroke="#0d1520" stroke-width="7" stroke-linecap="round"/><path d="M52 54 L48 62 M88 55 L91 62" stroke="#0d1520" stroke-width="7" stroke-linecap="round"/><text x="91" y="12" font-size="22" font-weight="900" fill="#a79bf7" stroke="#0d1520" stroke-width=".7">?</text></svg>`;
+    const catShake=()=>{const c=g('cat-help');if(!c)return;c.classList.remove('shake');void c.offsetWidth;c.classList.add('shake')};
+    const closeSheet=()=>{sheetOpen=false;const o=g('ask-overlay');if(o)o.remove()};
+    const openSheet=()=>{
+      if(g('ask-overlay'))return;
+      sheetOpen=true;
+      const b=L.blocks[i];
+      $.insertAdjacentHTML('beforeend',`<div class="ask-overlay" id="ask-overlay"><section class="ask-sheet" role="dialog" aria-modal="true" aria-labelledby="ask-title"><div class="ask-head"><h3 id="ask-title">Bingung bagian mana?</h3><button class="ask-close" id="ask-close" aria-label="Tutup">×</button></div><p style="margin:8px 0;color:#555;font-size:14px">Tanya tentang bagian pelajaran ini.</p><textarea id="ask-question" maxlength="300" rows="3" placeholder="Tulis pertanyaanmu (maks. 300 karakter)..."></textarea><button class="btn" id="ask-send">TANYA</button><div class="ask-answer" id="ask-answer" aria-live="polite"></div></section></div>`);
+      g('ask-close').onclick=closeSheet;
+      g('ask-overlay').onclick=e=>{if(e.target===g('ask-overlay'))closeSheet()};
+      g('ask-send').onclick=async()=>{
+        const question=g('ask-question').value.trim();
+        if(!question){g('ask-answer').textContent='Tulis pertanyaan dulu ya.';return}
+        const btn=g('ask-send');btn.disabled=true;btn.textContent='MEMIKIRKAN...';
+        g('ask-answer').textContent='Sedang berpikir...';
+        try{
+          const r=await api('/lessons/'+id+'/ask',{block_idx:i,question});
+          g('ask-answer').innerHTML=DOMPurify.sanitize(marked.parse(String(r.answer||'')));
+        }catch(e){g('ask-answer').textContent=e.message||'Maaf, tutor sedang kesulitan menjawab. Coba lagi sebentar ya.'}
+        finally{if(g('ask-send')){g('ask-send').disabled=false;g('ask-send').textContent='TANYA'}}
+      };
+      g('ask-question').focus();
+    };
     const show=()=>{
-      if(i>=L.blocks.length)return api('/lessons/'+id+'/complete',{}).then(r=>{
-        $.innerHTML=`<div class="card c"><h2>Selesai! 🎉</h2><p>Skor kuis: ${r.score}/${r.total}</p><button class="btn" id="b">KEMBALI</button></div>`;g('b').onclick=()=>course(cid)});
-      const b=L.blocks[i],pct=Math.round(i/L.blocks.length*100);
-      $.innerHTML=`<div class="top"><button class="x" id="x">✕</button><div class="bar"><i style="width:${pct}%"></i></div></div><div class="card" id="bd"></div><div id="fb"></div><button class="btn" id="nx" style="display:none">LANJUT</button>`;
-      g('x').onclick=()=>course(cid);g('nx').onclick=()=>{i++;show()};
-      if(b.type==='text'){g('bd').innerHTML=DOMPurify.sanitize(marked.parse(b.markdown));g('nx').style.display='block'}
-      else{
-        g('bd').innerHTML=`<h3>${esc(b.question)}</h3>`+b.options.map((o,k)=>`<button class="opt" data-k="${k}">${esc(o)}</button>`).join('');
-        g('bd').querySelectorAll('.opt').forEach(el=>el.onclick=async()=>{
-          const k=+el.dataset.k,r=await api('/lessons/'+id+'/answer',{quiz_idx:i,chosen:k});
-          g('bd').querySelectorAll('.opt').forEach((o,j)=>{o.disabled=true;if(j===r.correct)o.classList.add('ok');else if(j===k)o.classList.add('no')});
-          g('fb').innerHTML=`<p class="fb">${r.is_correct?'✅ Benar!':'❌ Kurang tepat.'} ${esc(r.explanation)}</p>`;g('nx').style.display='block';
-        });
+      if(i>=L.blocks.length)return finish();
+      const b=L.blocks[i],saved=quizAnswers[i];
+      const dots=L.blocks.map((_,n)=>`<span class="lesson-dot ${n===i?'active':''}" aria-label="Blok ${n+1}"></span>`).join('');
+      $.innerHTML=`<div class="top"><button class="x" id="x" aria-label="Keluar pelajaran">✕</button><b style="flex:1;text-align:center;font-size:14px">PELAJARAN</b><span style="width:28px"></span></div><div class="lesson-dots" aria-label="Progres pelajaran">${dots}</div><div class="card" id="bd"></div><div id="fb"></div><button class="cat-bubble" id="cat-help" aria-label="Tanya tutor AI">${catSvg}</button><div class="lesson-nav"><button class="btn sec lesson-prev" id="prev" aria-label="Blok sebelumnya" ${i===0?'disabled':''}>&lt;</button><button class="btn lesson-next" id="nx" ${b.type==='quiz'&&!saved?'style="display:none"':''}>LANJUT &gt;</button></div>`;
+      g('x').onclick=()=>course(cid);
+      g('prev').onclick=()=>{if(i>0){i--;show()}};
+      g('nx').onclick=()=>{i++;show()};
+      g('cat-help').onclick=openSheet;
+      if(b.type==='text'){
+        g('bd').innerHTML=DOMPurify.sanitize(marked.parse(b.markdown||''));
+      }else{
+        g('bd').innerHTML=`<h3>${esc(b.question)}</h3>`+(b.options||[]).map((o,k)=>`<button class="opt" data-k="${k}">${esc(o)}</button>`).join('');
+        if(saved){
+          g('bd').querySelectorAll('.opt').forEach((o,j)=>{o.disabled=true;if(j===saved.correct)o.classList.add('ok');else if(j===saved.chosen&&!saved.is_correct)o.classList.add('no')});
+          g('fb').innerHTML=`<p class="fb">${saved.is_correct?'✅ Benar!':'❌ Kurang tepat.'} ${esc(saved.explanation||'')}</p>`;
+        }else{
+          g('bd').querySelectorAll('.opt').forEach(el=>el.onclick=async()=>{
+            if(quizAnswers[i])return;
+            const k=+el.dataset.k;g('bd').querySelectorAll('.opt').forEach(o=>o.disabled=true);
+            try{
+              const r=await api('/lessons/'+id+'/answer',{quiz_idx:i,chosen:k});
+              quizAnswers[i]={chosen:k,correct:r.correct,is_correct:!!r.is_correct,explanation:r.explanation||''};
+              g('bd').querySelectorAll('.opt').forEach((o,j)=>{if(j===r.correct)o.classList.add('ok');else if(j===k)o.classList.add('no')});
+              g('fb').innerHTML=`<p class="fb">${r.is_correct?'✅ Benar!':'❌ Kurang tepat.'} ${esc(r.explanation||'')}</p>`;
+              g('nx').style.display='block';
+              if(!r.is_correct)catShake();
+            }catch(e){g('bd').querySelectorAll('.opt').forEach(o=>o.disabled=false);alert(e.message||'Jawaban gagal dikirim. Coba lagi ya.')}
+          });
+        }
       }
-    };show();
+    };
+    show();
   }).catch(e=>{alert(e.message);course(cid)});
 }
 token?home().catch(login):login();
