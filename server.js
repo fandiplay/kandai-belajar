@@ -26,6 +26,17 @@ async function ai(tool,prompt){
   if(!j)throw new Error('AI tidak mengembalikan JSON');
   return JSON.parse(j[0]);
 }
+async function aiText(system,user){
+  let base=process.env.AI_BASE_URL||'https://api.openai.com/v1';
+  while(base.endsWith('/'))base=base.slice(0,-1);
+  const url=base.endsWith('/chat/completions')?base:base+'/chat/completions';
+  const r=await fetch(url,{method:'POST',headers:{Authorization:'Bearer '+process.env.AI_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({model:process.env.AI_MODEL_NAME,temperature:0.5,messages:[{role:'system',content:system},{role:'user',content:user}]})});
+  const d=await r.json();
+  if(!r.ok)throw new Error('AI gagal: '+JSON.stringify(d.error||d));
+  const answer=d.choices?.[0]?.message?.content;
+  if(typeof answer!=='string'||!answer.trim())throw new Error('AI tidak memberikan jawaban');
+  return answer.trim();
+}
 const roadmapTool={name:'create_roadmap',description:'Buat roadmap belajar',input_schema:{type:'object',required:['course_title','units'],properties:{course_title:{type:'string'},units:{type:'array',items:{type:'object',required:['title','lessons'],properties:{title:{type:'string'},lessons:{type:'array',items:{type:'string'}}}}}}}};
 const lessonTool={name:'create_lesson',description:'Buat isi pelajaran: blok teks dan kuis diselang-seling',input_schema:{type:'object',required:['blocks'],properties:{blocks:{type:'array',items:{type:'object',required:['type'],properties:{type:{type:'string',enum:['text','quiz']},markdown:{type:'string'},question:{type:'string'},options:{type:'array',items:{type:'string'}},correct:{type:'integer'},explanation:{type:'string'}}}}}}};
 function validLesson(b){
@@ -97,6 +108,39 @@ app.post('/api/lessons/:id/answer',auth,wrap(async(q,s)=>{
   const ok=k===b.correct?1:0;
   await pool.query('INSERT IGNORE INTO answers(lesson_id,quiz_idx,chosen,is_correct) VALUES(?,?,?,?)',[l.id,+q.body.quiz_idx,k,ok]); // jawaban pertama yang dihitung
   s.json({is_correct:!!ok,correct:b.correct,explanation:b.explanation||''});
+}));
+// Tanya tutor AI: maksimum 10 pertanyaan per user dalam jendela 60 detik.
+const askWindows=new Map();
+app.post('/api/lessons/:id/ask',auth,wrap(async(q,s)=>{
+  const blockIdx=q.body?.block_idx;
+  const question=typeof q.body?.question==='string'?q.body.question.trim():'';
+  if(!Number.isInteger(blockIdx)||!question||question.length>300)
+    return s.status(400).json({error:'Tulis pertanyaan maksimal 300 karakter dan pilih blok yang valid.'});
+  const l=await getLesson(q.params.id,q.uid);
+  if(!l||!l.content)return s.status(404).json({error:'Pelajaran tidak ditemukan.'});
+  const blocks=JSON.parse(l.content);
+  if(blockIdx<0||blockIdx>=blocks.length)return s.status(400).json({error:'Bagian pelajaran tidak valid.'});
+  const now=Date.now(),windowMs=60000;
+  const recent=(askWindows.get(q.uid)||[]).filter(t=>now-t<windowMs);
+  if(recent.length>=10){askWindows.set(q.uid,recent);return s.status(429).json({error:'Kamu sudah mengajukan 10 pertanyaan dalam satu menit. Coba lagi sebentar ya.'});}
+  recent.push(now);askWindows.set(q.uid,recent);
+  const b=blocks[blockIdx];
+  let blockContext='';
+  if(b.type==='text'){
+    blockContext='Tipe: teks\nIsi: '+String(b.markdown||'').slice(0,5000);
+  }else if(b.type==='quiz'){
+    const [[answer]]=await pool.query('SELECT chosen,is_correct FROM answers WHERE lesson_id=? AND quiz_idx=? LIMIT 1',[l.id,blockIdx]);
+    blockContext='Tipe: kuis\nPertanyaan: '+String(b.question||'')+'\nPilihan: '+(b.options||[]).map((o,i)=>(i+1)+'. '+String(o)).join('\n');
+    if(answer){
+      blockContext+='\nStatus: kuis sudah dijawab. Jawaban yang benar: '+String((b.options||[])[b.correct]||'')+'\nPenjelasan: '+String(b.explanation||'');
+    }else{
+      blockContext+='\nStatus: kuis belum dijawab. JANGAN mengungkap atau menyebut pilihan yang benar, indeks jawaban, maupun kunci. Berikan petunjuk konseptual saja.';
+    }
+  }else return s.status(400).json({error:'Tipe blok tidak valid.'});
+  const system='Kamu tutor ramah. Jawab dalam bahasa Indonesia, singkat (maks 120 kata), mudah dipahami pemula, boleh pakai contoh. Jawab hanya berdasarkan konteks pelajaran.';
+  const user='Judul kursus: '+String(l.ct||'')+'\nJudul pelajaran: '+String(l.title||'')+'\nIndeks blok: '+blockIdx+'\nKonteks blok:\n'+blockContext+'\n\nPertanyaan siswa: '+question+'\nJawab hanya berdasarkan konteks di atas. Jika kuis belum dijawab, beri petunjuk tanpa membocorkan jawaban.';
+  const answer=await aiText(system,user);
+  s.json({answer});
 }));
 app.post('/api/lessons/:id/complete',auth,wrap(async(q,s)=>{
   const l=await getLesson(q.params.id,q.uid);if(!l||!l.content)return s.status(404).json({error:'Tidak ditemukan'});
