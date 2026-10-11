@@ -94,7 +94,7 @@ app.post('/api/lessons/:id/open',auth,wrap(async(q,s)=>{
   let blocks=l.content?JSON.parse(l.content):null;
   for(let i=0;i<3&&!blocks;i++){
     try{
-      const r=await ai(lessonTool,`Kursus: "${l.ct}". Unit: "${l.unit_title}". Buat pelajaran "${l.title}" dalam bahasa Indonesia yang ringan dan mudah dipahami pemula. Susun 6-8 blok: teks markdown singkat (maks 120 kata, boleh pakai contoh) diselang-seling dengan kuis pilihan ganda. Kuis selalu 4 opsi, "correct" adalah indeks 0-3, tulis "explanation" singkat. Blok pertama harus teks.`);
+      const r=await ai(lessonTool,`Kursus: "${l.ct}". Unit: "${l.unit_title}". Buat pelajaran "${l.title}" dalam bahasa Indonesia yang ringan dan mudah dipahami pemula. Susun 6-8 blok: teks markdown singkat (maks 120 kata, boleh pakai contoh) diselang-seling dengan kuis pilihan ganda. Kuis selalu 4 opsi, "correct" adalah indeks 0-3, tulis "explanation" singkat. Blok pertama harus teks. Untuk rumus matematika, tulis LaTeX: gunakan $...$ untuk rumus dalam kalimat dan $...$ untuk rumus tampil sendiri. Untuk matriks pakai \\begin{pmatrix} ... \\end{pmatrix}, pisahkan baris dengan \\\\ dan kolom dengan &. Jangan pakai \\[ \\] atau \\( \\). Jangan tulis rumus sebagai teks biasa. Karena keluaran berupa JSON, setiap backslash LaTeX harus di-escape menjadi dua backslash dalam string JSON (misalnya \\\\begin dan \\\\\\\\ untuk baris baru).`);
       blocks=validLesson(r.blocks);
     }catch(e){if(i===2)throw e}
   }
@@ -137,7 +137,7 @@ app.post('/api/lessons/:id/ask',auth,wrap(async(q,s)=>{
       blockContext+='\nStatus: kuis belum dijawab. JANGAN mengungkap atau menyebut pilihan yang benar, indeks jawaban, maupun kunci. Berikan petunjuk konseptual saja.';
     }
   }else return s.status(400).json({error:'Tipe blok tidak valid.'});
-  const system='Kamu tutor ramah. Jawab dalam bahasa Indonesia, singkat (maks 120 kata), mudah dipahami pemula, boleh pakai contoh. Jawab hanya berdasarkan konteks pelajaran.';
+  const system='Kamu tutor ramah. Jawab dalam bahasa Indonesia, singkat (maks 120 kata), mudah dipahami pemula, boleh pakai contoh. Jawab hanya berdasarkan konteks pelajaran. Untuk rumus matematika, tulis LaTeX: gunakan $...$ dalam kalimat dan $...$ untuk rumus tampil sendiri. Matriks gunakan \\begin{pmatrix} ... \\end{pmatrix}, baris dipisahkan \\\\ dan kolom dengan &. Jangan gunakan \\[ \\] atau \\( \\), dan jangan tulis rumus sebagai teks biasa. Jika keluaran JSON, escape backslash menjadi dua backslash.';
   const user='Judul kursus: '+String(l.ct||'')+'\nJudul pelajaran: '+String(l.title||'')+'\nIndeks blok: '+blockIdx+'\nKonteks blok:\n'+blockContext+'\n\nPertanyaan siswa: '+question+'\nJawab hanya berdasarkan konteks di atas. Jika kuis belum dijawab, beri petunjuk tanpa membocorkan jawaban.';
   const answer=await aiText(system,user);
   s.json({answer});
