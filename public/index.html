@@ -15,8 +15,7 @@
 .dot.done{background:#0d1520;color:#fff;box-shadow:0 5px 0 #a79bf7}.dot.lock{background:#f1eee8;border-color:#d8d3c8;box-shadow:none;color:#aaa}
 .fb{padding:10px 0}.link{color:#555;text-decoration:underline;cursor:pointer}pre{overflow:auto}
 
-.spacer{height:160px;pointer-events:none;display:block}
-#bd{padding-bottom:160px}
+.spacer{height:180px;pointer-events:none;flex-shrink:0;display:block}
 .math-block{overflow-x:auto;max-width:100%;text-align:center;margin:12px 0}
 .katex{font-size:1.1em}
 /* Navigasi pelajaran + tutor kucing */
@@ -126,18 +125,18 @@ function lesson(id,cid){
       if(i>=L.blocks.length)return finish();
       const b=L.blocks[i],saved=quizAnswers[i];
       const dots=L.blocks.map((_,n)=>`<span class="lesson-dot ${n===i?'active':''}" aria-label="Blok ${n+1}"></span>`).join('');
-      $.innerHTML=`<div class="top"><button class="x" id="x" aria-label="Keluar pelajaran">✕</button><b style="flex:1;text-align:center;font-size:14px">PELAJARAN</b><span style="width:28px"></span></div><div class="lesson-dots" aria-label="Progres pelajaran">${dots}</div><div class="card" id="bd"></div><div id="fb"></div><button class="cat-bubble" id="cat-help" aria-label="Tanya tutor AI">${catSvg}</button><div class="lesson-nav"><button class="btn sec lesson-prev" id="prev" aria-label="Blok sebelumnya" ${i===0?'disabled':''}>&lt;</button><button class="btn lesson-next" id="nx" ${b.type==='quiz'&&!saved?'style="display:none"':''}>LANJUT &gt;</button></div>`;
+      $.innerHTML=`<div class="top"><button class="x" id="x" aria-label="Keluar pelajaran">✕</button><b style="flex:1;text-align:center;font-size:14px">PELAJARAN</b><span style="width:28px"></span></div><div class="lesson-dots" aria-label="Progres pelajaran">${dots}</div><div class="card" id="bd"></div><div id="fb"></div><div class="spacer" aria-hidden="true"></div><button class="cat-bubble" id="cat-help" aria-label="Tanya tutor AI">${catSvg}</button><div class="lesson-nav"><button class="btn sec lesson-prev" id="prev" aria-label="Blok sebelumnya" ${i===0?'disabled':''}>&lt;</button><button class="btn lesson-next" id="nx" ${b.type==='quiz'&&!saved?'style="display:none"':''}>LANJUT &gt;</button></div>`;
       g('x').onclick=()=>course(cid);
       g('prev').onclick=()=>{if(i>0){i--;show()}};
       g('nx').onclick=()=>{i++;show()};
       g('cat-help').onclick=openSheet;
       if(b.type==='text'){
-        g('bd').innerHTML=renderRich(b.markdown||'')+'<div class="spacer" aria-hidden="true"></div>';
+        g('bd').innerHTML=renderRich(b.markdown||'');
       }else{
-        g('bd').innerHTML=`<h3>${renderRich(b.question,true)}</h3>`+(b.options||[]).map((o,k)=>`<button class="opt" data-k="${k}">${renderRich(o,true)}</button>`).join('')+'<div class="spacer" aria-hidden="true"></div>';
+        g('bd').innerHTML=`<h3>${renderRich(b.question,true)}</h3>`+(b.options||[]).map((o,k)=>`<button class="opt" data-k="${k}">${renderRich(o,true)}</button>`).join('');
         if(saved){
           g('bd').querySelectorAll('.opt').forEach((o,j)=>{o.disabled=true;if(j===saved.correct)o.classList.add('ok');else if(j===saved.chosen&&!saved.is_correct)o.classList.add('no')});
-          g('fb').innerHTML=`<p class="fb" id="feedback-text">${saved.is_correct?'✅ Benar!':'❌ Kurang tepat.'} ${renderRich(saved.explanation||'',true)}</p><div class="spacer" aria-hidden="true"></div>`;
+          g('fb').innerHTML=`<p class="fb" id="feedback-text">${saved.is_correct?'✅ Benar!':'❌ Kurang tepat.'} ${renderRich(saved.explanation||'',true)}</p>`;
         }else{
           g('bd').querySelectorAll('.opt').forEach(el=>el.onclick=async()=>{
             if(quizAnswers[i])return;
@@ -146,7 +145,7 @@ function lesson(id,cid){
               const r=await api('/lessons/'+id+'/answer',{quiz_idx:i,chosen:k});
               quizAnswers[i]={chosen:k,correct:r.correct,is_correct:!!r.is_correct,explanation:r.explanation||''};
               g('bd').querySelectorAll('.opt').forEach((o,j)=>{if(j===r.correct)o.classList.add('ok');else if(j===k)o.classList.add('no')});
-              g('fb').innerHTML=`<p class="fb" id="feedback-text">${r.is_correct?'✅ Benar!':'❌ Kurang tepat.'} ${renderRich(r.explanation||'',true)}</p><div class="spacer" aria-hidden="true"></div>`;
+              g('fb').innerHTML=`<p class="fb" id="feedback-text">${r.is_correct?'✅ Benar!':'❌ Kurang tepat.'} ${renderRich(r.explanation||'',true)}</p>`;
               g('nx').style.display='block';
               if(!r.is_correct)catShake();
               g('fb').scrollIntoView({behavior:'smooth',block:'center'});
