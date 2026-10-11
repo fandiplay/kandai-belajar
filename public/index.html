@@ -4,10 +4,10 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
 <style>
-*{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:#fdfcfa;color:#0d1520;max-width:520px;margin:auto;padding:16px}
-.card{border:2px solid #d8d3c8;border-radius:20px;padding:16px;margin:12px 0;background:#fff}.c{text-align:center}
+*{box-sizing:border-box;min-width:0}html{max-width:100%;overflow-x:hidden}body{margin:0;font-family:system-ui,sans-serif;background:#fdfcfa;color:#0d1520;width:100%;max-width:520px;overflow-x:hidden;margin-left:auto;margin-right:auto;padding:16px}
+.card{border:2px solid #d8d3c8;border-radius:20px;padding:16px;margin:12px 0;background:#fff;max-width:100%;min-width:0;overflow-wrap:anywhere}.c{text-align:center}
 .btn,.opt{display:block;width:100%;padding:14px;border-radius:14px;border:2px solid #0d1520;background:#0d1520;color:#fff;font-size:16px;font-weight:600;margin:10px 0;box-shadow:0 4px 0 #000}
-.opt{background:#fff;color:#0d1520;text-align:left;font-weight:400;box-shadow:0 3px 0 #0d1520;overflow-x:auto;white-space:nowrap;overscroll-behavior-x:contain}.opt .katex{font-size:.95em}.ok{background:#c9f2d0!important}.no{background:#f6c9c9!important}
+.opt{background:#fff;color:#0d1520;text-align:left;font-weight:400;box-shadow:0 3px 0 #0d1520;width:100%;max-width:100%;box-sizing:border-box;height:auto;min-height:56px;white-space:normal;overflow-wrap:anywhere;word-break:break-word;padding:14px 16px;line-height:1.5;overflow:visible}.opt .katex{font-size:1em;white-space:normal;max-width:100%;width:auto;min-width:0}.opt .katex-html{white-space:normal;max-width:100%}.opt .katex-display{max-width:100%;overflow-x:auto;font-size:.9em}.ok{background:#c9f2d0!important}.no{background:#f6c9c9!important}
 .btn.sec{background:#fff;color:#0d1520}input,textarea{width:100%;padding:12px;border:2px solid #d8d3c8;border-radius:12px;font-size:16px;margin:6px 0}
 .top{display:flex;gap:12px;align-items:center}.x{border:0;background:none;font-size:22px}.bar{flex:1;height:10px;background:#e6e2d9;border-radius:9px}.bar i{display:block;height:100%;background:#a79bf7;border-radius:9px}
 .unit{margin:22px 0 4px;font-weight:700;color:#555}.node{display:flex;align-items:center;gap:14px;margin:14px 0}
@@ -16,7 +16,7 @@
 .fb{padding:10px 0}.link{color:#555;text-decoration:underline;cursor:pointer}pre{overflow:auto}
 
 .spacer{height:180px;pointer-events:none;flex-shrink:0;display:block}
-.math-block{overflow-x:auto;max-width:100%;text-align:center;margin:12px 0}
+.math-block{overflow-x:auto;max-width:100%;min-width:0;text-align:center;margin:12px 0;font-size:.9em}
 .katex{font-size:1.1em}
 /* Navigasi pelajaran + tutor kucing */
 body{padding-bottom:112px}
@@ -28,6 +28,14 @@ body{padding-bottom:112px}
 .lesson-prev{width:58px;flex:0 0 58px;font-size:24px!important;padding:8px!important}
 .lesson-next{flex:1}
 .lesson-nav button:disabled{opacity:.35;box-shadow:none;cursor:not-allowed}
+#bd,#fb,.lesson-nav{box-sizing:border-box;max-width:100%;min-width:0}
+#bd,#fb{overflow-wrap:anywhere}
+#bd .katex,#fb .katex,.ask-answer .katex{max-width:100%}
+#bd .katex-display,#fb .katex-display,.ask-answer .katex-display{max-width:100%;overflow-x:auto;font-size:.9em}
+#bd p,#bd li,#fb p,#fb li,.ask-answer p,.ask-answer li{max-width:100%;overflow-wrap:anywhere;word-break:break-word}
+#app{width:100%;max-width:100%;min-width:0;overflow-x:hidden}
+.lesson-nav{width:min(calc(100% - 32px),488px)}
+
 .cat-bubble{position:fixed;z-index:21;right:max(16px,calc((100vw - 520px)/2 + 16px));bottom:88px;width:110px;height:70px;padding:4px;border:2px solid #0d1520;border-radius:15px;background:#fff;box-shadow:0 3px 0 #0d1520;display:flex;align-items:center;justify-content:center;cursor:pointer;animation:catWiggle 4s ease-in-out infinite;transform-origin:75% 100%}
 .cat-bubble svg{width:100%;height:100%}
 @keyframes catWiggle{0%,88%,100%{transform:rotate(0)}90%{transform:rotate(-4deg)}92%{transform:rotate(4deg)}94%{transform:rotate(-3deg)}96%{transform:rotate(2deg)}98%{transform:rotate(0)}}
