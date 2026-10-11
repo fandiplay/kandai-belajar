@@ -7,7 +7,7 @@
 *{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:#fdfcfa;color:#0d1520;max-width:520px;margin:auto;padding:16px}
 .card{border:2px solid #d8d3c8;border-radius:20px;padding:16px;margin:12px 0;background:#fff}.c{text-align:center}
 .btn,.opt{display:block;width:100%;padding:14px;border-radius:14px;border:2px solid #0d1520;background:#0d1520;color:#fff;font-size:16px;font-weight:600;margin:10px 0;box-shadow:0 4px 0 #000}
-.opt{background:#fff;color:#0d1520;text-align:left;font-weight:400;box-shadow:0 3px 0 #0d1520}.ok{background:#c9f2d0!important}.no{background:#f6c9c9!important}
+.opt{background:#fff;color:#0d1520;text-align:left;font-weight:400;box-shadow:0 3px 0 #0d1520;overflow-x:auto;white-space:nowrap;overscroll-behavior-x:contain}.opt .katex{font-size:.95em}.ok{background:#c9f2d0!important}.no{background:#f6c9c9!important}
 .btn.sec{background:#fff;color:#0d1520}input,textarea{width:100%;padding:12px;border:2px solid #d8d3c8;border-radius:12px;font-size:16px;margin:6px 0}
 .top{display:flex;gap:12px;align-items:center}.x{border:0;background:none;font-size:22px}.bar{flex:1;height:10px;background:#e6e2d9;border-radius:9px}.bar i{display:block;height:100%;background:#a79bf7;border-radius:9px}
 .unit{margin:22px 0 4px;font-weight:700;color:#555}.node{display:flex;align-items:center;gap:14px;margin:14px 0}
@@ -46,8 +46,26 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 function renderRich(value,short=false){
   const original=String(value??'');
   const normalized=original.replace(/\\\[([\s\S]*?)\\\]/g,'$$$$$1$$$$').replace(/\\\(([\s\S]*?)\\\)/g,'$$$$$1$$$$');
+  const mathPattern=/\$\$[\s\S]+?\$\$|\$[^$\n]+?\$/g;
+  const latexEnv=/\\begin\{(pmatrix|bmatrix|Bmatrix|vmatrix|Vmatrix|matrix|smallmatrix|cases|aligned|align\*?|array|gathered|split)\}[\s\S]*?\\end\{\1\}/g;
+  const wrapBareEnv=text=>text.replace(latexEnv,block=>'$'+block+'$');
+  let prepared='',last=0,match;
+  while((match=mathPattern.exec(normalized))!==null){
+    let outside=wrapBareEnv(normalized.slice(last,match.index));
+    if(short&&!outside.includes('$')&&/\\(?:frac|dfrac|tfrac|sqrt|sum|prod|int|oint|cdot|times|leq|geq|neq|approx|pi|alpha|beta|theta|infty|pm|div)\b|[\^_]/.test(outside.trim())&&outside.trim()){
+      const lead=outside.match(/^\s*/)?.[0]||'',trail=outside.match(/\s*$/)?.[0]||'';
+      outside=lead+'$'+outside.trim()+'$'+trail;
+    }
+    prepared+=outside+match[0];last=match.index+match[0].length;
+  }
+  let tail=wrapBareEnv(normalized.slice(last));
+  if(short&&!tail.includes('$')&&/\\(?:frac|dfrac|tfrac|sqrt|sum|prod|int|oint|cdot|times|leq|geq|neq|approx|pi|alpha|beta|theta|infty|pm|div)\b|[\^_]/.test(tail.trim())&&tail.trim()){
+    const lead=tail.match(/^\s*/)?.[0]||'',trail=tail.match(/\s*$/)?.[0]||'';
+    tail=lead+'$'+tail.trim()+'$'+trail;
+  }
+  prepared+=tail;
   const formulas=[];
-  const tokenized=normalized.replace(/\$\$([\s\S]+?)\$\$|\$([^$\n]+?)\$/g,(whole,display,inline)=>{
+  const tokenized=prepared.replace(/\$\$([\s\S]+?)\$\$|\$([^$\n]+?)\$/g,(whole,display,inline)=>{
     const formula=display??inline,isDisplay=display!==undefined,token='@@MATH'+formulas.length+'@@';
     formulas.push({token,formula,isDisplay,original:whole});return token;
   });
