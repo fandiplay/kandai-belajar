@@ -1,0 +1,72 @@
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Belajar AI</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,sans-serif;background:#fdfcfa;color:#0d1520;max-width:520px;margin:auto;padding:16px}
+.card{border:2px solid #d8d3c8;border-radius:20px;padding:16px;margin:12px 0;background:#fff}.c{text-align:center}
+.btn,.opt{display:block;width:100%;padding:14px;border-radius:14px;border:2px solid #0d1520;background:#0d1520;color:#fff;font-size:16px;font-weight:600;margin:10px 0;box-shadow:0 4px 0 #000}
+.opt{background:#fff;color:#0d1520;text-align:left;font-weight:400;box-shadow:0 3px 0 #0d1520}.ok{background:#c9f2d0!important}.no{background:#f6c9c9!important}
+.btn.sec{background:#fff;color:#0d1520}input,textarea{width:100%;padding:12px;border:2px solid #d8d3c8;border-radius:12px;font-size:16px;margin:6px 0}
+.top{display:flex;gap:12px;align-items:center}.x{border:0;background:none;font-size:22px}.bar{flex:1;height:10px;background:#e6e2d9;border-radius:9px}.bar i{display:block;height:100%;background:#a79bf7;border-radius:9px}
+.unit{margin:22px 0 4px;font-weight:700;color:#555}.node{display:flex;align-items:center;gap:14px;margin:14px 0}
+.dot{width:64px;height:64px;border-radius:50%;border:3px solid #0d1520;background:#fff;font-size:22px;box-shadow:0 5px 0 #0d1520}
+.dot.done{background:#0d1520;color:#fff;box-shadow:0 5px 0 #a79bf7}.dot.lock{background:#f1eee8;border-color:#d8d3c8;box-shadow:none;color:#aaa}
+.fb{padding:10px 0}.link{color:#555;text-decoration:underline;cursor:pointer}pre{overflow:auto}
+</style></head><body><div id="app"></div>
+<script>
+const $=document.getElementById('app'),g=id=>document.getElementById(id);let token=localStorage.t;
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+async function api(p,body){
+  const r=await fetch('/api'+p,{method:body?'POST':'GET',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:body?JSON.stringify(body):undefined});
+  const d=await r.json();if(r.status===401&&token){logout();}if(!r.ok)throw new Error(d.error);return d;
+}
+function logout(){localStorage.removeItem('t');token=null;login()}
+function login(reg){
+  $.innerHTML=`<div class="card"><h2 class="c">${reg?'Daftar':'Masuk'}</h2><input id="u" placeholder="Username" autocapitalize="none"><input id="p" type="password" placeholder="Password"><button class="btn" id="go">${reg?'DAFTAR':'MASUK'}</button><p class="c link" id="sw">${reg?'Sudah punya akun? Masuk':'Belum punya akun? Daftar'}</p></div>`;
+  g('sw').onclick=()=>login(!reg);
+  g('go').onclick=async()=>{try{const d=await api(reg?'/register':'/login',{username:g('u').value,password:g('p').value});token=d.token;localStorage.t=token;home()}catch(e){alert(e.message)}};
+}
+async function home(){
+  const cs=await api('/courses');
+  $.innerHTML=`<div class="top"><h2 style="flex:1">Kamu penasaran tentang apa?</h2><span class="link" id="lo">Keluar</span></div>
+  <textarea id="pr" rows="2" placeholder="Aku ingin belajar..."></textarea><button class="btn" id="mk">BUAT ROADMAP</button>
+  ${cs.map(c=>`<div class="card" data-id="${c.id}" style="cursor:pointer"><b>${esc(c.title)}</b><br><small>${c.done}/${c.total} pelajaran</small></div>`).join('')}`;
+  g('lo').onclick=logout;
+  $.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>course(el.dataset.id));
+  g('mk').onclick=async()=>{const p=g('pr').value.trim();if(!p)return;g('mk').disabled=true;g('mk').textContent='Menyusun roadmap...';
+    try{const d=await api('/courses',{prompt:p});course(d.id)}catch(e){alert(e.message);home()}};
+}
+async function course(id){
+  const c=await api('/courses/'+id);let last=-1,open=c.lessons.findIndex(l=>!l.done),h='';
+  c.lessons.forEach((l,i)=>{
+    if(l.unit_idx!==last){last=l.unit_idx;h+=`<div class="unit">${l.unit_idx+1}. ${esc(l.unit_title)}</div>`}
+    const st=l.done?'done':(i===open?'':'lock'),ic=l.done?'✓':(i===open?'▶':'🔒'),off=[0,40,70,40,0][i%5];
+    h+=`<div class="node" style="margin-left:${off}px"><button class="dot ${st}" ${st==='lock'?'disabled':''} data-l="${l.id}">${ic}</button><span>${esc(l.title)}</span></div>`;
+  });
+  $.innerHTML=`<div class="top"><button class="x" id="bk">←</button><h2>${esc(c.title)}</h2></div>${h}`;
+  g('bk').onclick=home;$.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>lesson(b.dataset.l,id));
+}
+function lesson(id,cid){
+  $.innerHTML='<p class="c">Menyiapkan materi, tunggu sebentar...</p>';
+  api('/lessons/'+id+'/open',{}).then(L=>{
+    let i=0;
+    const show=()=>{
+      if(i>=L.blocks.length)return api('/lessons/'+id+'/complete',{}).then(r=>{
+        $.innerHTML=`<div class="card c"><h2>Selesai! 🎉</h2><p>Skor kuis: ${r.score}/${r.total}</p><button class="btn" id="b">KEMBALI</button></div>`;g('b').onclick=()=>course(cid)});
+      const b=L.blocks[i],pct=Math.round(i/L.blocks.length*100);
+      $.innerHTML=`<div class="top"><button class="x" id="x">✕</button><div class="bar"><i style="width:${pct}%"></i></div></div><div class="card" id="bd"></div><div id="fb"></div><button class="btn" id="nx" style="display:none">LANJUT</button>`;
+      g('x').onclick=()=>course(cid);g('nx').onclick=()=>{i++;show()};
+      if(b.type==='text'){g('bd').innerHTML=DOMPurify.sanitize(marked.parse(b.markdown));g('nx').style.display='block'}
+      else{
+        g('bd').innerHTML=`<h3>${esc(b.question)}</h3>`+b.options.map((o,k)=>`<button class="opt" data-k="${k}">${esc(o)}</button>`).join('');
+        g('bd').querySelectorAll('.opt').forEach(el=>el.onclick=async()=>{
+          const k=+el.dataset.k,r=await api('/lessons/'+id+'/answer',{quiz_idx:i,chosen:k});
+          g('bd').querySelectorAll('.opt').forEach((o,j)=>{o.disabled=true;if(j===r.correct)o.classList.add('ok');else if(j===k)o.classList.add('no')});
+          g('fb').innerHTML=`<p class="fb">${r.is_correct?'✅ Benar!':'❌ Kurang tepat.'} ${esc(r.explanation)}</p>`;g('nx').style.display='block';
+        });
+      }
+    };show();
+  }).catch(e=>{alert(e.message);course(cid)});
+}
+token?home().catch(login):login();
+</script></body></html>
