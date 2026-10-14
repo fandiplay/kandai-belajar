@@ -209,7 +209,7 @@ function lesson(id,cid){
         }catch(e){
           pending.classList.add('error');pending.querySelector('.ask-message-body').className='ask-message-body';pending.querySelector('.ask-message-body').textContent='Gagal menjawab, coba lagi';
           const retry=document.createElement('button');retry.type='button';retry.className='ask-retry';retry.textContent='Coba lagi';
-          retry.addEventListener('click',()=>sendQuestion(question,rowToUpdate,Number(rowToUpdate.dataset.blockIdx)));pending.appendChild(retry);scrollAskBottom();
+          retry.addEventListener('click',()=>{pending.remove();sendQuestion(question,rowToUpdate,Number(rowToUpdate.dataset.blockIdx))});pending.appendChild(retry);scrollAskBottom();
         }finally{askPending=false;send.disabled=false;send.textContent='TANYA';input.disabled=false}
       };
       form.addEventListener('submit',e=>{e.preventDefault();const q=input.value.trim();if(q)sendQuestion(q,null,i)});
