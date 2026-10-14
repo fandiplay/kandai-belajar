@@ -31,11 +31,13 @@ async function ai(tool,prompt){
   if(!j)throw new Error('AI tidak mengembalikan JSON');
   return JSON.parse(j[0]);
 }
-async function aiText(system,user){
+async function aiText(system,user,history=[]){
   let base=process.env.AI_BASE_URL||'https://api.openai.com/v1';
   while(base.endsWith('/'))base=base.slice(0,-1);
   const url=base.endsWith('/chat/completions')?base:base+'/chat/completions';
-  const r=await fetch(url,{method:'POST',headers:{Authorization:'Bearer '+process.env.AI_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({model:process.env.AI_MODEL_NAME,temperature:0.5,messages:[{role:'system',content:system},{role:'user',content:user}]})});
+  const messages=[{role:'system',content:system},...history.map(m=>({role:m.role,content:m.content}))];
+  if(user)messages.push({role:'user',content:user});
+  const r=await fetch(url,{method:'POST',headers:{Authorization:'Bearer '+process.env.AI_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({model:process.env.AI_MODEL_NAME,temperature:0.5,messages})});
   const d=await r.json();
   if(!r.ok)throw new Error('AI gagal: '+JSON.stringify(d.error||d));
   const answer=d.choices?.[0]?.message?.content;
@@ -136,6 +138,18 @@ app.post('/api/lessons/:id/answer',auth,wrap(async(q,s)=>{
 }));
 // Tanya tutor AI: maksimum 10 pertanyaan per user dalam jendela 60 detik.
 const askWindows=new Map();
+app.get('/api/lessons/:id/ask-history',auth,wrap(async(q,s)=>{
+  const l=await getLesson(q.params.id,q.uid);
+  if(!l)return s.status(404).json({error:'Pelajaran tidak ditemukan.'});
+  const [rows]=await pool.query('SELECT id,block_idx,role,content,created_at FROM tutor_messages WHERE lesson_id=? AND user_id=? ORDER BY id ASC',[l.id,q.uid]);
+  s.json(rows);
+}));
+app.delete('/api/lessons/:id/ask-history',auth,wrap(async(q,s)=>{
+  const l=await getLesson(q.params.id,q.uid);
+  if(!l)return s.status(404).json({error:'Pelajaran tidak ditemukan.'});
+  await pool.query('DELETE FROM tutor_messages WHERE lesson_id=? AND user_id=?',[l.id,q.uid]);
+  s.json({ok:true});
+}));
 app.post('/api/lessons/:id/ask',auth,wrap(async(q,s)=>{
   const blockIdx=q.body?.block_idx;
   const question=typeof q.body?.question==='string'?q.body.question.trim():'';
@@ -162,9 +176,13 @@ app.post('/api/lessons/:id/ask',auth,wrap(async(q,s)=>{
       blockContext+='\nStatus: kuis belum dijawab. JANGAN mengungkap atau menyebut pilihan yang benar, indeks jawaban, maupun kunci. Berikan petunjuk konseptual saja.';
     }
   }else return s.status(400).json({error:'Tipe blok tidak valid.'});
-  const system='Kamu tutor ramah. Jawab dalam bahasa Indonesia, singkat (maks 120 kata), mudah dipahami pemula, boleh pakai contoh. Jawab hanya berdasarkan konteks pelajaran. Untuk rumus matematika, tulis LaTeX: gunakan $...$ dalam kalimat dan $...$ untuk rumus tampil sendiri. Matriks gunakan \\begin{pmatrix} ... \\end{pmatrix}, baris dipisahkan \\\\ dan kolom dengan &. Jangan gunakan \\[ \\] atau \\( \\), dan jangan tulis rumus sebagai teks biasa. Jika keluaran JSON, escape backslash menjadi dua backslash.';
+  const system='Kamu tutor ramah. Jawab dalam bahasa Indonesia, singkat (maks 120 kata), mudah dipahami pemula, boleh pakai contoh. Jawab hanya berdasarkan konteks pelajaran. Untuk rumus matematika, tulis LaTeX: gunakan $...$ dalam kalimat dan $$...$$ untuk rumus tampil sendiri. Matriks gunakan \\begin{pmatrix} ... \\end{pmatrix}, baris dipisahkan \\\\ dan kolom dengan &. Jangan gunakan \\[ \\] atau \\( \\), dan jangan tulis rumus sebagai teks biasa. Jika keluaran JSON, escape backslash menjadi dua backslash.';
   const user='Judul kursus: '+String(l.ct||'')+'\nJudul pelajaran: '+String(l.title||'')+'\nIndeks blok: '+blockIdx+'\nKonteks blok:\n'+blockContext+'\n\nPertanyaan siswa: '+question+'\nJawab hanya berdasarkan konteks di atas. Jika kuis belum dijawab, beri petunjuk tanpa membocorkan jawaban.';
-  const answer=await aiText(system,user);
+  await pool.query("INSERT INTO tutor_messages(user_id,lesson_id,block_idx,role,content) VALUES(?,?,?,'user',?)",[q.uid,l.id,blockIdx,question]);
+  const [historyRows]=await pool.query("SELECT role,content FROM tutor_messages WHERE lesson_id=? AND user_id=? ORDER BY id DESC LIMIT 6",[l.id,q.uid]);
+  const history=historyRows.reverse().map(m=>({role:m.role,content:m.content})).filter(m=>m.role==='user'||m.role==='assistant');
+  const answer=await aiText(system,null,history);
+  await pool.query("INSERT INTO tutor_messages(user_id,lesson_id,block_idx,role,content) VALUES(?,?,?,'assistant',?)",[q.uid,l.id,blockIdx,answer]);
   s.json({answer});
 }));
 app.post('/api/lessons/:id/complete',auth,wrap(async(q,s)=>{
