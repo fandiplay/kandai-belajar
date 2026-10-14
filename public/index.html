@@ -47,6 +47,14 @@ body{padding-bottom:112px}
 .ask-sheet textarea{resize:vertical;min-height:84px;max-height:150px;margin-top:14px}
 .ask-answer{overflow-wrap:anywhere;line-height:1.55}.ask-answer:empty{display:none}
 .ask-answer p:first-child{margin-top:0}
+.stats{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-shrink:0;font-size:14px;font-weight:750;white-space:nowrap}
+.stat{display:inline-flex;align-items:center;gap:3px}
+.stat-flame.inactive{opacity:.32;filter:grayscale(1)}
+.xp-pop{display:inline-block;margin-left:8px;color:#6b55d9;font-size:13px;font-weight:800;animation:xpPop 1.2s ease-out both}
+@keyframes xpPop{0%{opacity:0;transform:translateY(8px)}20%{opacity:1;transform:translateY(0)}75%{opacity:1;transform:translateY(-5px)}100%{opacity:0;transform:translateY(-13px)}}
+.streak-pop{display:inline-block;animation:streakPop .6s ease-out}
+@keyframes streakPop{0%{transform:scale(.7);opacity:.3}65%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
+@media(max-width:380px){.stats{gap:6px;font-size:12px}.top{gap:7px}.top h2{font-size:18px}}
 </style></head><body><div id="app"></div>
 <script>
 const $=document.getElementById('app'),g=id=>document.getElementById(id);let token=localStorage.t;
@@ -89,29 +97,30 @@ async function api(p,body){
   const d=await r.json();if(r.status===401&&token){logout();}if(!r.ok)throw new Error(d.error);return d;
 }
 function logout(){localStorage.removeItem('t');token=null;login()}
+function statsHTML(me){return `<div class="stats" aria-label="Statistik belajar"><span class="stat stat-flame ${!me.active_today&&me.streak>0?'inactive':''}" title="${me.active_today?'Sudah belajar hari ini':'Belum belajar hari ini'}">🔥 <span>${esc(me.streak)}</span></span><span class="stat" title="Total XP">⭐ <span>${esc(me.xp)}</span></span></div>`;}
 function login(reg){
   $.innerHTML=`<div class="card"><h2 class="c">${reg?'Daftar':'Masuk'}</h2><input id="u" placeholder="Username" autocapitalize="none"><input id="p" type="password" placeholder="Password"><button class="btn" id="go">${reg?'DAFTAR':'MASUK'}</button><p class="c link" id="sw">${reg?'Sudah punya akun? Masuk':'Belum punya akun? Daftar'}</p></div>`;
   g('sw').onclick=()=>login(!reg);
   g('go').onclick=async()=>{try{const d=await api(reg?'/register':'/login',{username:g('u').value,password:g('p').value});token=d.token;localStorage.t=token;home()}catch(e){alert(e.message)}};
 }
 async function home(){
-  const cs=await api('/courses');
-  $.innerHTML=`<div class="top"><h2 style="flex:1">Kamu penasaran tentang apa?</h2><span class="link" id="lo">Keluar</span></div>
+  const [cs,me]=await Promise.all([api('/courses'),api('/me')]);
+  $.innerHTML=`<div class="top"><h2 style="flex:1">Kamu penasaran tentang apa?</h2>${statsHTML(me)}<span class="link" id="lo">Keluar</span></div>
   <textarea id="pr" rows="2" placeholder="Aku ingin belajar..."></textarea><button class="btn" id="mk">BUAT ROADMAP</button>
-  ${cs.map(c=>`<div class="card" data-id="${c.id}" style="cursor:pointer"><b>${esc(c.title)}</b><br><small>${c.done}/${c.total} pelajaran</small></div>`).join('')}`;
+  ${cs.map(c=>`<div class="card" data-id="${c.id}" style="cursor:pointer"><b>${esc(c.title)}</b><br><small>${esc(c.done)}/${esc(c.total)} pelajaran</small></div>`).join('')}`;
   g('lo').onclick=logout;
   $.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>course(el.dataset.id));
   g('mk').onclick=async()=>{const p=g('pr').value.trim();if(!p)return;g('mk').disabled=true;g('mk').textContent='Menyusun roadmap...';
     try{const d=await api('/courses',{prompt:p});course(d.id)}catch(e){alert(e.message);home()}};
 }
 async function course(id){
-  const c=await api('/courses/'+id);let last=-1,open=c.lessons.findIndex(l=>!l.done),h='';
+  const [c,me]=await Promise.all([api('/courses/'+id),api('/me')]);let last=-1,open=c.lessons.findIndex(l=>!l.done),h='';
   c.lessons.forEach((l,i)=>{
-    if(l.unit_idx!==last){last=l.unit_idx;h+=`<div class="unit">${l.unit_idx+1}. ${esc(l.unit_title)}</div>`}
+    if(l.unit_idx!==last){last=l.unit_idx;h+=`<div class="unit">${esc(Number(l.unit_idx)+1)}. ${esc(l.unit_title)}</div>`}
     const st=l.done?'done':(i===open?'':'lock'),ic=l.done?'✓':(i===open?'▶':'🔒'),off=[0,40,70,40,0][i%5];
-    h+=`<div class="node" style="margin-left:${off}px"><button class="dot ${st}" ${st==='lock'?'disabled':''} data-l="${l.id}">${ic}</button><span>${esc(l.title)}</span></div>`;
+    h+=`<div class="node" style="margin-left:${off}px"><button class="dot ${st}" ${st==='lock'?'disabled':''} data-l="${esc(l.id)}">${ic}</button><span>${esc(l.title)}</span></div>`;
   });
-  $.innerHTML=`<div class="top"><button class="x" id="bk">←</button><h2>${esc(c.title)}</h2></div>${h}`;
+  $.innerHTML=`<div class="top"><button class="x" id="bk">←</button><h2 style="flex:1;min-width:0">${esc(c.title)}</h2>${statsHTML(me)}</div>${h}`;
   g('bk').onclick=home;$.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>lesson(b.dataset.l,id));
 }
 function lesson(id,cid){
@@ -121,7 +130,8 @@ function lesson(id,cid){
     const quizAnswers={};
     let sheetOpen=false;
     const finish=()=>api('/lessons/'+id+'/complete',{}).then(r=>{
-      $.innerHTML=`<div class="card c"><h2>Selesai! 🎉</h2><p>Skor kuis: ${r.score}/${r.total}</p><button class="btn" id="b">KEMBALI</button></div>`;
+      const details=r.xp_gained>0?`<p>Pelajaran: <b>+${esc(r.xp_lesson_gained)} XP</b></p>${r.xp_perfect_gained>0?`<p>Bonus sempurna: <b>+${esc(r.xp_perfect_gained)} XP</b></p>`:''}`:`<p>Pelajaran ini sudah pernah diselesaikan, tidak ada XP tambahan.</p>`;
+      $.innerHTML=`<div class="card c"><h2>Selesai! 🎉</h2><p>Skor kuis: ${esc(r.score)}/${esc(r.total)}</p>${details}<p>XP didapat: <b>+${esc(r.xp_gained)} XP</b></p><p>⭐ Total XP: <b>${esc(r.xp)}</b></p><p>🔥 Streak: <b>${esc(r.streak)} hari</b></p>${r.streak_increased?`<p class="streak-pop">🔥 Streak naik jadi ${esc(r.streak)} hari!</p>`:''}<button class="btn" id="b">KEMBALI</button></div>`;
       g('b').onclick=()=>course(cid);
     }).catch(e=>alert(e.message));
     const catSvg=`<svg viewBox="0 0 120 72" role="img" aria-label="Kucing bingung"><path d="M72 18 Q75 5 86 8 L96 19 Q105 18 111 28 L113 42 Q110 54 94 56 L54 56 Q38 55 33 45 Q28 35 38 29 L50 25 L57 13 Q61 8 66 17 Z" fill="#0d1520"/><path d="M81 17 L86 12 L91 20" fill="#fff"/><path d="M48 33 Q54 28 59 34 M70 33 Q76 28 81 34" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/><path d="M62 40 Q66 44 70 40" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/><path d="M38 48 Q25 53 18 47 Q13 43 17 39" fill="none" stroke="#0d1520" stroke-width="7" stroke-linecap="round"/><path d="M52 54 L48 62 M88 55 L91 62" stroke="#0d1520" stroke-width="7" stroke-linecap="round"/><text x="91" y="12" font-size="22" font-weight="900" fill="#a79bf7" stroke="#0d1520" stroke-width=".7">?</text></svg>`;
@@ -171,7 +181,7 @@ function lesson(id,cid){
               const r=await api('/lessons/'+id+'/answer',{quiz_idx:i,chosen:k});
               quizAnswers[i]={chosen:k,correct:r.correct,is_correct:!!r.is_correct,explanation:r.explanation||''};
               g('bd').querySelectorAll('.opt').forEach((o,j)=>{if(j===r.correct)o.classList.add('ok');else if(j===k)o.classList.add('no')});
-              g('fb').innerHTML=`<p class="fb" id="feedback-text">${r.is_correct?'✅ Benar!':'❌ Kurang tepat.'} ${renderRich(r.explanation||'',true)}</p>`;
+              g('fb').innerHTML=`<p class="fb" id="feedback-text">${r.is_correct?'✅ Benar!':'❌ Kurang tepat.'} ${renderRich(r.explanation||'',true)} ${Number(r.xp_gained)>0?`<span class="xp-pop">+${esc(r.xp_gained)} XP</span>`:''}</p>`;
               g('nx').style.display='block';
               if(!r.is_correct)catShake();
               g('fb').scrollIntoView({behavior:'smooth',block:'center'});
