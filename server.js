@@ -62,7 +62,7 @@ app.post('/api/register',wrap(async(q,s)=>{
   catch(e){if(e.code==='ER_DUP_ENTRY')return s.status(409).json({error:'Username sudah dipakai'});throw e}
 }));
 app.get('/api/me',auth,wrap(async(q,s)=>{
-  const [[u]]=await pool.query('SELECT username,xp,streak,best_streak,last_active_date FROM users WHERE id=?',[q.uid]);
+  const [[u]]=await pool.query('SELECT username,xp,streak,best_streak,DATE_FORMAT(last_active_date,\'%Y-%m-%d\') AS last_active_date FROM users WHERE id=?',[q.uid]);
   if(!u)return s.status(404).json({error:'Pengguna tidak ditemukan'});
   const today=todayWIB(),yesterday=yesterdayWIB(),last=dateString(u.last_active_date);
   const streak=last&&last<yesterday?0:Number(u.streak)||0;
@@ -180,7 +180,7 @@ app.post('/api/lessons/:id/complete',auth,wrap(async(q,s)=>{
     await conn.query('UPDATE lessons SET completed_at=COALESCE(completed_at,NOW()),score=? WHERE id=?',[score,l.id]);
     let xpGained=0,streakIncreased=false;
     const today=todayWIB(),yesterday=yesterdayWIB();
-    let [[u]]=await conn.query('SELECT xp,streak,best_streak,last_active_date FROM users WHERE id=? FOR UPDATE',[q.uid]);
+    let [[u]]=await conn.query('SELECT xp,streak,best_streak,DATE_FORMAT(last_active_date,\'%Y-%m-%d\') AS last_active_date FROM users WHERE id=? FOR UPDATE',[q.uid]);
     if(!u)throw new Error('Pengguna tidak ditemukan');
     if(!wasCompleted){
       const last=dateString(u.last_active_date),storedStreak=Number(u.streak)||0;
