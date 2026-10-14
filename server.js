@@ -2,6 +2,11 @@ require('dotenv').config();
 const express=require('express'),mysql=require('mysql2/promise'),bcrypt=require('bcryptjs'),jwt=require('jsonwebtoken'),path=require('path');
 const app=express();app.use(express.json());app.use(express.static(path.join(__dirname,'public')));
 const pool=mysql.createPool({host:process.env.DB_HOST||'127.0.0.1',user:process.env.DB_USER,password:process.env.DB_PASS,database:process.env.DB_NAME,connectionLimit:5});
+const XP_CORRECT=5,XP_LESSON=20,XP_PERFECT=10;
+const TZ_NAME=process.env.TZ_NAME||'Asia/Jakarta';
+const todayWIB=()=>new Date().toLocaleDateString('sv-SE',{timeZone:TZ_NAME});
+const yesterdayWIB=()=>{const d=new Date(todayWIB()+'T00:00:00Z');d.setUTCDate(d.getUTCDate()-1);return d.toISOString().slice(0,10)};
+const dateString=v=>v instanceof Date?v.toISOString().slice(0,10):String(v||'').slice(0,10);
 const wrap=f=>(q,s)=>f(q,s).catch(e=>{console.error(e);s.status(500).json({error:e.message})});
 const auth=(q,s,n)=>{try{q.uid=jwt.verify((q.headers.authorization||'').replace('Bearer ',''),process.env.JWT_SECRET).uid;n()}catch{s.status(401).json({error:'Belum login'})}};
 const sign=id=>jwt.sign({uid:id},process.env.JWT_SECRET,{expiresIn:'30d'});
@@ -56,6 +61,17 @@ app.post('/api/register',wrap(async(q,s)=>{
   try{const [r]=await pool.query('INSERT INTO users(username,password_hash) VALUES(?,?)',[u,bcrypt.hashSync(p,10)]);s.json({token:sign(r.insertId),username:u})}
   catch(e){if(e.code==='ER_DUP_ENTRY')return s.status(409).json({error:'Username sudah dipakai'});throw e}
 }));
+app.get('/api/me',auth,wrap(async(q,s)=>{
+  const [[u]]=await pool.query('SELECT username,xp,streak,best_streak,last_active_date FROM users WHERE id=?',[q.uid]);
+  if(!u)return s.status(404).json({error:'Pengguna tidak ditemukan'});
+  const today=todayWIB(),yesterday=yesterdayWIB(),last=dateString(u.last_active_date);
+  const streak=last&&last<yesterday?0:Number(u.streak)||0;
+  s.json({username:u.username,xp:Number(u.xp)||0,streak,best_streak:Number(u.best_streak)||0,active_today:last===today});
+}));
+app.get('/api/xp-history',auth,wrap(async(q,s)=>{
+  const [rows]=await pool.query('SELECT reason,points,created_at FROM xp_events WHERE user_id=? ORDER BY id DESC LIMIT 30',[q.uid]);
+  s.json(rows.map(r=>({...r,points:Number(r.points)})));
+}));
 app.post('/api/login',wrap(async(q,s)=>{
   const [[u]]=await pool.query('SELECT * FROM users WHERE username=?',[String(q.body.username||'').trim()]);
   if(!u||!bcrypt.compareSync(String(q.body.password||''),u.password_hash))return s.status(401).json({error:'Username atau password salah'});
@@ -103,11 +119,20 @@ app.post('/api/lessons/:id/open',auth,wrap(async(q,s)=>{
 }));
 app.post('/api/lessons/:id/answer',auth,wrap(async(q,s)=>{
   const l=await getLesson(q.params.id,q.uid);if(!l||!l.content)return s.status(404).json({error:'Tidak ditemukan'});
-  const b=JSON.parse(l.content)[+q.body.quiz_idx],k=+q.body.chosen;
-  if(!b||b.type!=='quiz'||!(k>=0&&k<4))return s.status(400).json({error:'Data tidak valid'});
-  const ok=k===b.correct?1:0;
-  await pool.query('INSERT IGNORE INTO answers(lesson_id,quiz_idx,chosen,is_correct) VALUES(?,?,?,?)',[l.id,+q.body.quiz_idx,k,ok]); // jawaban pertama yang dihitung
-  s.json({is_correct:!!ok,correct:b.correct,explanation:b.explanation||''});
+  const quizIdx=Number(q.body.quiz_idx),k=Number(q.body.chosen),blocks=JSON.parse(l.content),b=blocks[quizIdx];
+  if(!Number.isInteger(quizIdx)||!b||b.type!=='quiz'||!Number.isInteger(k)||k<0||k>=4)return s.status(400).json({error:'Data tidak valid'});
+  const ok=k===b.correct?1:0,conn=await pool.getConnection();let xpGained=0;
+  try{
+    await conn.beginTransaction();
+    const [ins]=await conn.query('INSERT IGNORE INTO answers(lesson_id,quiz_idx,chosen,is_correct) VALUES(?,?,?,?)',[l.id,quizIdx,k,ok]);
+    if(ins.affectedRows===1&&ok){
+      xpGained=XP_CORRECT;
+      await conn.query('UPDATE users SET xp=xp+? WHERE id=?',[xpGained,q.uid]);
+      await conn.query('INSERT INTO xp_events(user_id,lesson_id,reason,points) VALUES(?,?,?,?)',[q.uid,l.id,'correct',xpGained]);
+    }
+    await conn.commit();
+  }catch(e){await conn.rollback();throw e}finally{conn.release()}
+  s.json({is_correct:!!ok,correct:b.correct,explanation:b.explanation||'',xp_gained:xpGained});
 }));
 // Tanya tutor AI: maksimum 10 pertanyaan per user dalam jendela 60 detik.
 const askWindows=new Map();
@@ -145,9 +170,39 @@ app.post('/api/lessons/:id/ask',auth,wrap(async(q,s)=>{
 app.post('/api/lessons/:id/complete',auth,wrap(async(q,s)=>{
   const l=await getLesson(q.params.id,q.uid);if(!l||!l.content)return s.status(404).json({error:'Tidak ditemukan'});
   const total=JSON.parse(l.content).filter(b=>b.type==='quiz').length;
-  const [[a]]=await pool.query('SELECT COALESCE(SUM(is_correct),0) sc FROM answers WHERE lesson_id=?',[l.id]);
-  await pool.query('UPDATE lessons SET completed_at=COALESCE(completed_at,NOW()),score=? WHERE id=?',[+a.sc,l.id]);
-  s.json({score:+a.sc,total});
+  const conn=await pool.getConnection();let response;
+  try{
+    await conn.beginTransaction();
+    const [[lockedLesson]]=await conn.query('SELECT completed_at FROM lessons WHERE id=? FOR UPDATE',[l.id]);
+    const wasCompleted=!!lockedLesson?.completed_at;
+    const [[a]]=await conn.query('SELECT COALESCE(SUM(is_correct),0) sc,COUNT(*) answered FROM answers WHERE lesson_id=?',[l.id]);
+    const score=Number(a.sc)||0,perfect=total>0&&Number(a.answered)===total&&score===total;
+    await conn.query('UPDATE lessons SET completed_at=COALESCE(completed_at,NOW()),score=? WHERE id=?',[score,l.id]);
+    let xpGained=0,streakIncreased=false;
+    const today=todayWIB(),yesterday=yesterdayWIB();
+    let [[u]]=await conn.query('SELECT xp,streak,best_streak,last_active_date FROM users WHERE id=? FOR UPDATE',[q.uid]);
+    if(!u)throw new Error('Pengguna tidak ditemukan');
+    if(!wasCompleted){
+      const last=dateString(u.last_active_date),storedStreak=Number(u.streak)||0;
+      const oldStreak=last&&last>=yesterday?storedStreak:0;
+      let newStreak;
+      if(last===today)newStreak=storedStreak;
+      else if(last===yesterday)newStreak=storedStreak+1;
+      else newStreak=1;
+      streakIncreased=newStreak>oldStreak;
+      const events=[[q.uid,l.id,'lesson',XP_LESSON]];
+      xpGained+=XP_LESSON;
+      if(perfect){events.push([q.uid,l.id,'perfect',XP_PERFECT]);xpGained+=XP_PERFECT}
+      await conn.query('UPDATE users SET xp=xp+?,streak=?,best_streak=GREATEST(best_streak,?),last_active_date=? WHERE id=?',[xpGained,newStreak,newStreak,today,q.uid]);
+      await conn.query('INSERT INTO xp_events(user_id,lesson_id,reason,points) VALUES ?',[events]);
+      u={...u,xp:Number(u.xp)+xpGained,streak:newStreak,best_streak:Math.max(Number(u.best_streak)||0,newStreak),last_active_date:today};
+    }
+    const last=dateString(u.last_active_date);
+    const currentStreak=last&&last<yesterday?0:Number(u.streak)||0;
+    response={score,total,xp_gained:xpGained,xp_lesson_gained:wasCompleted?0:XP_LESSON,xp_perfect_gained:!wasCompleted&&perfect?XP_PERFECT:0,xp:Number(u.xp)||0,streak:currentStreak,streak_increased:streakIncreased,perfect};
+    await conn.commit();
+  }catch(e){await conn.rollback();throw e}finally{conn.release()}
+  s.json(response);
 }));
 
 app.listen(process.env.PORT||3000,()=>console.log('Jalan di http://localhost:'+(process.env.PORT||3000)));
