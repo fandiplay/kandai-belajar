@@ -178,10 +178,10 @@ app.post('/api/lessons/:id/ask',auth,wrap(async(q,s)=>{
   }else return s.status(400).json({error:'Tipe blok tidak valid.'});
   const system='Kamu tutor ramah. Jawab dalam bahasa Indonesia, singkat (maks 120 kata), mudah dipahami pemula, boleh pakai contoh. Jawab hanya berdasarkan konteks pelajaran. Untuk rumus matematika, tulis LaTeX: gunakan $...$ dalam kalimat dan $$...$$ untuk rumus tampil sendiri. Matriks gunakan \\begin{pmatrix} ... \\end{pmatrix}, baris dipisahkan \\\\ dan kolom dengan &. Jangan gunakan \\[ \\] atau \\( \\), dan jangan tulis rumus sebagai teks biasa. Jika keluaran JSON, escape backslash menjadi dua backslash.';
   const user='Judul kursus: '+String(l.ct||'')+'\nJudul pelajaran: '+String(l.title||'')+'\nIndeks blok: '+blockIdx+'\nKonteks blok:\n'+blockContext+'\n\nPertanyaan siswa: '+question+'\nJawab hanya berdasarkan konteks di atas. Jika kuis belum dijawab, beri petunjuk tanpa membocorkan jawaban.';
-  await pool.query("INSERT INTO tutor_messages(user_id,lesson_id,block_idx,role,content) VALUES(?,?,?,'user',?)",[q.uid,l.id,blockIdx,question]);
   const [historyRows]=await pool.query("SELECT role,content FROM tutor_messages WHERE lesson_id=? AND user_id=? ORDER BY id DESC LIMIT 6",[l.id,q.uid]);
   const history=historyRows.reverse().map(m=>({role:m.role,content:m.content})).filter(m=>m.role==='user'||m.role==='assistant');
-  const answer=await aiText(system,null,history);
+  await pool.query("INSERT INTO tutor_messages(user_id,lesson_id,block_idx,role,content) VALUES(?,?,?,'user',?)",[q.uid,l.id,blockIdx,question]);
+  const answer=await aiText(system,user,history);
   await pool.query("INSERT INTO tutor_messages(user_id,lesson_id,block_idx,role,content) VALUES(?,?,?,'assistant',?)",[q.uid,l.id,blockIdx,answer]);
   s.json({answer});
 }));
