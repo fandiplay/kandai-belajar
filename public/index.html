@@ -1,78 +1,230 @@
-<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Belajar AI</title>
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Belajar AI</title>
+<script>try{var _th=localStorage.getItem('theme');if(_th)document.documentElement.setAttribute('data-theme',_th)}catch(e){}</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
 <style>
-*{box-sizing:border-box;min-width:0}html{max-width:100%;overflow-x:hidden}body{margin:0;font-family:system-ui,sans-serif;background:#fdfcfa;color:#0d1520;width:100%;max-width:520px;overflow-x:hidden;margin-left:auto;margin-right:auto;padding:16px}
-.card{border:2px solid #d8d3c8;border-radius:20px;padding:16px;margin:12px 0;background:#fff;max-width:100%;min-width:0;overflow-wrap:anywhere}.c{text-align:center}
-.btn,.opt{display:block;width:100%;padding:14px;border-radius:14px;border:2px solid #0d1520;background:#0d1520;color:#fff;font-size:16px;font-weight:600;margin:10px 0;box-shadow:0 4px 0 #000}
-.opt{background:#fff;color:#0d1520;text-align:left;font-weight:400;box-shadow:0 3px 0 #0d1520;width:100%;max-width:100%;box-sizing:border-box;height:auto;min-height:56px;white-space:normal;overflow-wrap:anywhere;word-break:break-word;padding:14px 16px;line-height:1.5;overflow:visible}.opt .katex{font-size:1em;white-space:normal;max-width:100%;width:auto;min-width:0}.opt .katex-html{white-space:normal;max-width:100%}.opt .katex-display{max-width:100%;overflow-x:auto;font-size:.9em}.ok{background:#c9f2d0!important}.no{background:#f6c9c9!important}
-.btn.sec{background:#fff;color:#0d1520}input,textarea{width:100%;padding:12px;border:2px solid #d8d3c8;border-radius:12px;font-size:16px;margin:6px 0}
-.top{display:flex;gap:12px;align-items:center}.x{border:0;background:none;font-size:22px}.bar{flex:1;height:10px;background:#e6e2d9;border-radius:9px}.bar i{display:block;height:100%;background:#a79bf7;border-radius:9px}
-.unit{margin:22px 0 4px;font-weight:700;color:#555}.node{display:flex;align-items:center;gap:14px;margin:14px 0}
-.dot{width:64px;height:64px;border-radius:50%;border:3px solid #0d1520;background:#fff;font-size:22px;box-shadow:0 5px 0 #0d1520}
-.dot.done{background:#0d1520;color:#fff;box-shadow:0 5px 0 #a79bf7}.dot.lock{background:#f1eee8;border-color:#d8d3c8;box-shadow:none;color:#aaa}
-.fb{padding:10px 0}.link{color:#555;text-decoration:underline;cursor:pointer}pre{overflow:auto}
-
-.spacer{height:180px;pointer-events:none;flex-shrink:0;display:block}
-.math-block{overflow-x:auto;max-width:100%;min-width:0;text-align:center;margin:12px 0;font-size:.9em}
+/* ===== LANGKAH 1: Design tokens ===== */
+:root{--bg:#131f24;--card:#1f2c34;--border:#37464f;--border-d:#2b3841;--text:#ffffff;--muted:#afafaf;
+--green:#58cc02;--green-d:#58a700;--gold:#ffc800;--gold-d:#e5a800;--blue:#1cb0f6;--blue-d:#1899d6;
+--red:#ff4b4b;--red-d:#ea2b2b;--orange:#ff9600;--purple:#a79bf7;--cat-body:#ffffff;--cat-face:#131f24}
+:root[data-theme="light"]{--bg:#ffffff;--card:#f7f7f7;--border:#e5e5e5;--border-d:#cfcfcf;--text:#3c3c3c;--muted:#777777;--cat-body:#0d1520;--cat-face:#ffffff}
+*{box-sizing:border-box;min-width:0}
+html{max-width:100%;overflow-x:hidden}
+body{margin:0;width:100%;max-width:520px;margin-left:auto;margin-right:auto;overflow-x:clip;background:var(--bg);color:var(--text);
+font-family:"Nunito",system-ui,-apple-system,"Segoe UI",sans-serif;font-weight:600;min-height:100vh;min-height:100dvh}
+@supports(height:100dvh){body{min-height:100dvh}}
+#app{width:100%;max-width:100%;min-width:0;padding:0 16px}
+body.nav-on #app{padding-bottom:calc(94px + env(safe-area-inset-bottom))}
+.c{text-align:center}.muted{color:var(--muted)}
+h1,h2,h3{color:var(--text)}
+/* Komponen dasar */
+.card{background:var(--card);border:2px solid var(--border);border-radius:20px;padding:16px;margin:12px 0;max-width:100%;min-width:0;overflow-wrap:anywhere}
+.btn{--btn-d:var(--green-d);display:block;width:100%;padding:14px;border:0;border-radius:16px;background:var(--green);color:#fff;
+font-family:inherit;font-size:15px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;margin:10px 0;cursor:pointer;
+box-shadow:0 5px 0 var(--btn-d);transition:transform .06s,box-shadow .06s;-webkit-tap-highlight-color:transparent}
+.btn:active:not(:disabled){transform:translateY(4px);box-shadow:0 1px 0 var(--btn-d)}
+.btn:disabled{opacity:.5;box-shadow:none;cursor:not-allowed}
+.btn-blue{--btn-d:var(--blue-d);background:var(--blue)}
+.btn-gold{--btn-d:var(--gold-d);background:var(--gold)}
+.btn-red{--btn-d:var(--red-d);background:var(--red)}
+.btn-ghost{--btn-d:var(--border);background:transparent;color:var(--text);border:2px solid var(--border);box-shadow:0 4px 0 var(--border)}
+.btn-ghost:active:not(:disabled){box-shadow:0 1px 0 var(--border)}
+input,textarea{width:100%;padding:12px;border:2px solid var(--border);border-radius:14px;font-size:16px;font-family:inherit;font-weight:600;margin:6px 0;background:var(--card);color:var(--text);outline:none}
+input:focus,textarea:focus{border-color:var(--blue)}
+input::placeholder,textarea::placeholder{color:var(--muted)}
+.link{color:var(--blue);text-decoration:underline;cursor:pointer;font-weight:700;background:none;border:0;font-family:inherit;font-size:inherit;padding:0}
+.page-title{font-size:26px;font-weight:900;margin:18px 0 10px}
+/* Opsi kuis */
+.opt{display:block;width:100%;max-width:100%;padding:14px 16px;border:2px solid var(--border);border-radius:16px;background:var(--card);color:var(--text);
+font-family:inherit;font-size:16px;font-weight:600;text-align:left;margin:10px 0;box-shadow:0 4px 0 var(--border);min-height:56px;white-space:normal;
+overflow-wrap:anywhere;word-break:break-word;line-height:1.5;overflow:visible;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.opt:active:not(:disabled){transform:translateY(2px);box-shadow:0 2px 0 var(--border)}
+.opt:disabled{cursor:default}
+.opt .katex{font-size:1em;white-space:normal;max-width:100%;width:auto;min-width:0}
+.opt .katex-html{white-space:normal;max-width:100%}
+.opt .katex-display{max-width:100%;overflow-x:auto;font-size:.9em}
+.opt.ok{background:rgba(88,204,2,.18)!important;border-color:var(--green)!important}
+.opt.no{background:rgba(255,75,75,.14)!important;border-color:var(--red)!important}
+/* KaTeX & materi mengikuti tema */
+.katex{color:var(--text)}
+.math-block{overflow-x:auto;max-width:100%;min-width:0;text-align:center;margin:12px 0;font-size:.95em}
 .katex{font-size:1.1em}
-/* Navigasi pelajaran + tutor kucing */
-body{padding-bottom:112px}
-.lesson-dots{display:flex;align-items:center;justify-content:center;gap:6px;min-height:16px;margin:12px 0 18px}
-.lesson-dot{height:7px;width:7px;border-radius:99px;background:#d8d8df;transition:width .2s,background .2s}
-.lesson-dot.active{width:25px;background:#a79bf7}
-.lesson-nav{position:fixed;z-index:20;bottom:10px;left:50%;transform:translateX(-50%);width:min(calc(100% - 32px),488px);display:flex;gap:10px;padding:8px;background:#fdfcfa;border:2px solid #0d1520;border-radius:18px;box-shadow:0 4px 0 #0d1520}
-.lesson-nav button{margin:0;box-shadow:none;height:52px}
-.lesson-prev{width:58px;flex:0 0 58px;font-size:24px!important;padding:8px!important}
-.lesson-next{flex:1}
-.lesson-nav button:disabled{opacity:.35;box-shadow:none;cursor:not-allowed}
-#bd,#fb,.lesson-nav{box-sizing:border-box;max-width:100%;min-width:0}
-#bd,#fb{overflow-wrap:anywhere}
+/* ===== LANGKAH 3: Bottom nav ===== */
+#nav{position:fixed;z-index:35;bottom:0;left:50%;transform:translateX(-50%);width:min(100%,520px);display:none;gap:8px;padding:8px 12px calc(8px + env(safe-area-inset-bottom));background:var(--bg);border-top:2px solid var(--border)}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border:2px solid transparent;border-radius:14px;background:transparent;color:var(--muted);font-family:inherit;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;cursor:pointer}
+.tab svg{width:24px;height:24px}
+.tab.active{background:var(--card);border-color:var(--blue);color:var(--blue)}
+/* Kartu kursus */
+.pbar-track{height:14px;border-radius:99px;background:var(--border);overflow:hidden;margin:10px 0 6px}
+.pbar-track i{display:block;height:100%;background:var(--green);border-radius:99px;box-shadow:inset 0 3px 0 rgba(255,255,255,.25)}
+/* ===== LANGKAH 2: Roadmap ===== */
+.statusbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:14px;background:var(--bg);margin:0 -16px;padding:10px 16px;min-height:60px}
+.sb-sp{flex:1}
+.sb-stat{display:inline-flex;align-items:center;gap:5px;font-weight:800;font-size:16px}
+.sb-stat svg{width:26px;height:26px}
+.sb-flame{color:var(--orange)}
+.sb-flame.off{color:var(--muted)}
+.sb-flame.off svg{color:var(--border)}
+.sb-xp{color:var(--gold)}
+.icon-btn{width:40px;height:40px;flex:none;border-radius:12px;border:2px solid var(--border);background:var(--card);color:var(--text);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 0 var(--border);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.icon-btn svg{width:20px;height:20px}
+.icon-btn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--border)}
+.unit-banner{position:sticky;top:60px;z-index:25;background:var(--green);border:0;border-bottom:5px solid var(--green-d);border-radius:16px;color:#fff;padding:12px 16px;margin:10px 0 18px}
+.unit-banner small{display:block;font-size:12px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;opacity:.92}
+.unit-banner b{display:block;font-size:20px;font-weight:900;line-height:1.25}
+.crs-title{margin:14px 0 2px;font-size:24px}
+.path{display:flex;flex-direction:column;align-items:center;padding-top:8px}
+.node-wrap{position:relative;width:76px;height:76px;margin-bottom:28px;flex:none}
+.node-btn{width:76px;height:76px;border-radius:50%;border:0;background:var(--green);--nd:var(--green-d);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 0 var(--nd);-webkit-tap-highlight-color:transparent}
+.node-btn svg{width:34px;height:34px}
+.node-btn:active:not(:disabled){transform:translateY(4px);box-shadow:0 4px 0 var(--nd)}
+.node-btn.done{background:var(--gold);--nd:var(--gold-d)}
+.node-btn.lock{background:var(--border);--nd:var(--border-d);cursor:default}
+.node-btn.lock svg{opacity:.85}
+.node-stars{position:absolute;top:calc(100% + 5px);left:50%;transform:translateX(-50%);display:flex;gap:2px}
+.node-stars svg{width:15px;height:15px}
+.node-stars .on{color:var(--gold)}
+.node-stars .off{color:var(--border)}
+.bubble-start{position:absolute;bottom:calc(100% + 12px);left:50%;background:#fff;color:#3c3c3c;border:2px solid var(--border);border-radius:12px;padding:6px 10px;font-size:12px;font-weight:900;letter-spacing:.8px;white-space:nowrap;animation:bob 1.6s ease-in-out infinite;z-index:2}
+.bubble-start::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%) rotate(45deg);margin-top:-8px;width:12px;height:12px;background:#fff;border-right:2px solid var(--border);border-bottom:2px solid var(--border)}
+@keyframes bob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-6px)}}
+.node-cat{position:absolute;top:50%;width:86px;transform:translateY(-50%);pointer-events:none}
+.node-cat.left{right:calc(100% + 10px)}
+.node-cat.right{left:calc(100% + 10px)}
+.node-cat svg{width:100%;height:auto;color:var(--cat-body)}
+.jump{position:fixed;z-index:28;right:max(16px,calc((100vw - 520px)/2 + 16px));bottom:calc(94px + env(safe-area-inset-bottom));width:56px;height:56px;border-radius:18px;background:var(--card);border:2px solid var(--border);color:var(--text);box-shadow:0 4px 0 var(--border);display:none;align-items:center;justify-content:center;cursor:pointer}
+.jump svg{width:24px;height:24px}
+.jump:active{transform:translateY(2px);box-shadow:0 2px 0 var(--border)}
+/* ===== LANGKAH 4: Layar pelajaran ===== */
+.l-head{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:12px;background:var(--bg);margin:0 -16px;padding:12px 16px}
+.pbar{flex:1;height:16px;border-radius:9px;background:var(--border);overflow:hidden}
+.pbar i{display:block;height:100%;width:0;background:var(--green);border-radius:9px;box-shadow:inset 0 3px 0 rgba(255,255,255,.25);transition:width .3s ease}
+#bd{padding:6px 2px;font-size:18px;line-height:1.6;overflow-wrap:anywhere;max-width:100%;min-width:0}
+#bd h3{font-size:22px;font-weight:800;margin:6px 0 12px;line-height:1.35}
+#bd h1,#bd h2{font-weight:900;line-height:1.3}
+#bd p{margin:10px 0}
+#bd ul,#bd ol{padding-left:22px}
+#bd table,.ask-message table{border-collapse:collapse;max-width:100%;display:block;overflow-x:auto;margin:10px 0}
+#bd th,#bd td,.ask-message th,.ask-message td{border:1px solid var(--border);padding:6px 10px}
+#bd code,.ask-message code{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:1px 5px;font-size:.9em}
+#bd pre{background:var(--card);border:2px solid var(--border);border-radius:12px;padding:12px;overflow-x:auto;max-width:100%}
+#bd pre code{background:none;border:0;padding:0}
+#bd blockquote{border-left:4px solid var(--blue);margin:10px 0;padding:2px 12px;color:var(--muted)}
+#bd img{max-width:100%}
 #bd .katex,#fb .katex,.ask-answer .katex{max-width:100%}
 #bd .katex-display,#fb .katex-display,.ask-answer .katex-display{max-width:100%;overflow-x:auto;font-size:.9em}
 #bd p,#bd li,#fb p,#fb li,.ask-answer p,.ask-answer li{max-width:100%;overflow-wrap:anywhere;word-break:break-word}
-#app{width:100%;max-width:100%;min-width:0;overflow-x:hidden}
-.lesson-nav{width:min(calc(100% - 32px),488px)}
-
-.cat-bubble{position:fixed;z-index:21;right:max(16px,calc((100vw - 520px)/2 + 16px));bottom:88px;width:110px;height:70px;padding:4px;border:2px solid #0d1520;border-radius:15px;background:#fff;box-shadow:0 3px 0 #0d1520;display:flex;align-items:center;justify-content:center;cursor:pointer;animation:catWiggle 4s ease-in-out infinite;transform-origin:75% 100%}
-.cat-bubble svg{width:100%;height:100%}
-@keyframes catWiggle{0%,88%,100%{transform:rotate(0)}90%{transform:rotate(-4deg)}92%{transform:rotate(4deg)}94%{transform:rotate(-3deg)}96%{transform:rotate(2deg)}98%{transform:rotate(0)}}
-.cat-bubble.shake{animation:catNudge .42s ease-in-out}
-@keyframes catNudge{0%,100%{transform:rotate(0)}25%{transform:rotate(-8deg)}50%{transform:rotate(7deg)}75%{transform:rotate(-4deg)}}
-.ask-overlay{position:fixed;z-index:40;inset:0;background:#0d152077;display:flex;align-items:flex-end;justify-content:center}
-.ask-sheet{width:min(100%,520px);max-height:85vh;max-height:85dvh;display:flex;flex-direction:column;overflow:hidden;background:#fff;border:2px solid #0d1520;border-bottom:0;border-radius:24px 24px 0 0;padding:14px 14px calc(10px + env(safe-area-inset-bottom));box-shadow:0 -5px 0 #0d1520;min-height:0}
-.ask-head{display:flex;align-items:center;gap:8px;flex-shrink:0;padding-bottom:10px;border-bottom:2px solid #d8d3c8}.ask-head h3{flex:1;margin:0;font-size:18px}.ask-close{border:2px solid #0d1520;border-radius:10px;background:#fff;font-size:22px;width:40px;height:40px;flex-shrink:0}
-.ask-clear{border:1.5px solid #0d1520;background:#fff;border-radius:9px;padding:7px 8px;font-size:11px;font-weight:700;color:#0d1520}
-.ask-subtitle{margin:8px 0;color:#555;font-size:12px;flex-shrink:0}
-.ask-messages{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding:8px 2px 12px;display:flex;flex-direction:column;gap:12px}
-.ask-message{max-width:88%;min-width:0;border:2px solid #0d1520;border-radius:15px;padding:9px 11px;overflow-wrap:anywhere;word-break:break-word;line-height:1.5;flex-shrink:0}
-.ask-message.user{align-self:flex-end;background:#0d1520;color:#fff;border-bottom-right-radius:5px}
-.ask-message.assistant{align-self:flex-start;background:#fff;color:#0d1520;border-bottom-left-radius:5px}
-.ask-message.error{border-color:#b3261e;background:#fff8f7;color:#7f1d1d}
-.ask-label{font-size:10px;font-weight:800;letter-spacing:.02em;opacity:.72;margin-bottom:4px}
-.ask-message p{margin:5px 0}.ask-message p:first-child{margin-top:0}.ask-message p:last-child{margin-bottom:0}
-.ask-message .katex{max-width:100%}.ask-message .katex-display,.ask-message .math-block{max-width:100%;overflow-x:auto;font-size:.9em}
-.ask-composer{display:flex;gap:8px;align-items:flex-end;flex-shrink:0;padding-top:10px;border-top:2px solid #d8d3c8;background:#fff}
-.ask-composer textarea{flex:1;min-width:0;resize:none;min-height:46px;max-height:112px;margin:0;padding:10px;border:2px solid #d8d3c8;border-radius:12px;font-size:16px;line-height:1.4;overflow-y:auto}
-.ask-send{width:auto;min-width:84px;margin:0;padding:12px 10px;box-shadow:0 3px 0 #000;align-self:stretch}
-.ask-send:disabled{opacity:.55}
-.ask-thinking{opacity:.7;font-style:italic}
-.ask-retry{margin-top:7px;border:1px solid #7f1d1d;background:#fff;border-radius:8px;padding:5px 8px;font-size:12px;font-weight:700;color:#7f1d1d}
-@supports(height:100dvh){.ask-sheet{max-height:85dvh}}
-.stats{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-shrink:0;font-size:14px;font-weight:750;white-space:nowrap}
-.stat{display:inline-flex;align-items:center;gap:3px}
-.stat-flame.inactive{opacity:.32;filter:grayscale(1)}
-.xp-pop{display:inline-block;margin-left:8px;color:#6b55d9;font-size:13px;font-weight:800;animation:xpPop 1.2s ease-out both}
+#bd,#fb{box-sizing:border-box;max-width:100%;min-width:0;overflow-wrap:anywhere}
+#fb{margin-top:14px;border-radius:16px;overflow-wrap:anywhere}
+#fb:empty{display:none}
+#fb.good{background:rgba(88,204,2,.15);border:2px solid var(--green);padding:13px 16px;animation:slideUp .25s ease both}
+#fb.bad{background:rgba(255,75,75,.12);border:2px solid var(--red);padding:13px 16px;animation:slideUp .25s ease both}
+#fb .fb-t{font-weight:900}
+#fb.good .fb-t{color:var(--green)}
+#fb.bad .fb-t{color:var(--red)}
+@keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.lesson-nav{position:fixed;z-index:20;bottom:0;left:50%;transform:translateX(-50%);width:min(100%,520px);display:flex;gap:12px;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:var(--bg)}
+.lesson-nav button{margin:0;height:52px}
+.lesson-prev{width:58px;flex:0 0 58px;padding:8px!important;display:flex;align-items:center;justify-content:center}
+.lesson-prev svg{width:22px;height:22px}
+.lesson-next{flex:1}
+.lesson-nav button:disabled{opacity:.35;box-shadow:none;cursor:not-allowed}
+.spacer{height:180px;pointer-events:none;flex-shrink:0;display:block}
+.xp-pop{display:inline-block;margin-left:8px;color:var(--gold);font-size:13px;font-weight:800;animation:xpPop 1.2s ease-out both}
 @keyframes xpPop{0%{opacity:0;transform:translateY(8px)}20%{opacity:1;transform:translateY(0)}75%{opacity:1;transform:translateY(-5px)}100%{opacity:0;transform:translateY(-13px)}}
 .streak-pop{display:inline-block;animation:streakPop .6s ease-out}
 @keyframes streakPop{0%{transform:scale(.7);opacity:.3}65%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
-@media(max-width:380px){.stats{gap:6px;font-size:12px}.top{gap:7px}.top h2{font-size:18px}}
-</style></head><body><div id="app"></div>
+/* Tutor kucing */
+.cat-bubble{position:fixed;z-index:21;right:max(16px,calc((100vw - 520px)/2 + 16px));bottom:calc(96px + env(safe-area-inset-bottom));width:110px;height:70px;padding:4px;border:2px solid var(--border);border-radius:15px;background:var(--card);box-shadow:0 3px 0 var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;animation:catWiggle 4s ease-in-out infinite;transform-origin:75% 100%}
+.cat-bubble svg{width:100%;height:100%;color:var(--cat-body)}
+@keyframes catWiggle{0%,88%,100%{transform:rotate(0)}90%{transform:rotate(-4deg)}92%{transform:rotate(4deg)}94%{transform:rotate(-3deg)}96%{transform:rotate(2deg)}98%{transform:rotate(0)}}
+.cat-bubble.shake{animation:catNudge .42s ease-in-out}
+@keyframes catNudge{0%,100%{transform:rotate(0)}25%{transform:rotate(-8deg)}50%{transform:rotate(7deg)}75%{transform:rotate(-4deg)}}
+/* Sheet tanya kucing */
+.ask-overlay{position:fixed;z-index:40;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center}
+.ask-sheet{width:min(100%,520px);max-height:85vh;display:flex;flex-direction:column;overflow:hidden;background:var(--card);border:2px solid var(--border);border-bottom:0;border-radius:24px 24px 0 0;padding:14px 14px calc(10px + env(safe-area-inset-bottom));box-shadow:0 -4px 0 rgba(0,0,0,.3);min-height:0}
+@supports(height:100dvh){.ask-sheet{max-height:85dvh}}
+.ask-head{display:flex;align-items:center;gap:8px;flex-shrink:0;padding-bottom:10px;border-bottom:2px solid var(--border)}
+.ask-head h3{flex:1;margin:0;font-size:18px}
+.ask-close{border:2px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);font-size:22px;width:40px;height:40px;flex-shrink:0;cursor:pointer}
+.ask-clear{border:2px solid var(--border);background:transparent;border-radius:9px;padding:7px 8px;font-size:11px;font-weight:800;color:var(--blue);font-family:inherit;cursor:pointer}
+.ask-subtitle{margin:8px 0;color:var(--muted);font-size:12px;flex-shrink:0}
+.ask-messages{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding:8px 2px 12px;display:flex;flex-direction:column;gap:12px}
+.ask-message{max-width:88%;min-width:0;border:2px solid var(--border);border-radius:15px;padding:9px 11px;overflow-wrap:anywhere;word-break:break-word;line-height:1.5;flex-shrink:0;background:var(--card)}
+.ask-message.user{align-self:flex-end;background:var(--blue);border-color:var(--blue);color:#fff;border-bottom-right-radius:5px}
+.ask-message.assistant{align-self:flex-start;background:var(--card);border-bottom-left-radius:5px}
+.ask-message.error{border-color:var(--red);color:var(--red)}
+.ask-label{font-size:10px;font-weight:800;letter-spacing:.02em;opacity:.72;margin-bottom:4px}
+.ask-message p{margin:5px 0}.ask-message p:first-child{margin-top:0}.ask-message p:last-child{margin-bottom:0}
+.ask-message .katex{max-width:100%}
+.ask-message .katex-display,.ask-message .math-block{max-width:100%;overflow-x:auto;font-size:.9em}
+.ask-composer{display:flex;gap:8px;align-items:flex-end;flex-shrink:0;padding-top:10px;border-top:2px solid var(--border);background:var(--card)}
+.ask-composer textarea{flex:1;min-width:0;resize:none;min-height:46px;max-height:112px;margin:0;padding:10px;border:2px solid var(--border);border-radius:12px;font-size:16px;line-height:1.4;overflow-y:auto;background:var(--bg);color:var(--text)}
+.ask-send{width:auto;min-width:84px;margin:0;padding:12px 10px;align-self:stretch}
+.ask-send:disabled{opacity:.55}
+.ask-thinking{opacity:.7;font-style:italic}
+.ask-retry{margin-top:7px;border:1px solid var(--red);background:transparent;border-radius:8px;padding:5px 8px;font-size:12px;font-weight:700;color:var(--red);font-family:inherit;cursor:pointer}
+/* ===== LANGKAH 5: Selesai, profil, auth ===== */
+.fin{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px 0}
+.fin-cat svg{width:200px;height:auto;color:var(--cat-body)}
+.fin h1{font-size:30px;font-weight:900;margin:14px 0 22px}
+.fin-stats{display:flex;gap:12px;width:100%;max-width:360px;margin-bottom:16px}
+.fstat{flex:1;border:2px solid var(--border);border-radius:16px;overflow:hidden;background:var(--card)}
+.fstat-h{padding:6px 4px;font-size:12px;font-weight:900;letter-spacing:1px;color:#fff;text-transform:uppercase}
+.fstat-h.gold{background:var(--gold)}.fstat-h.green{background:var(--green)}.fstat-h.orange{background:var(--orange)}
+.fstat-v{padding:12px 6px;font-size:22px;font-weight:900}
+.fin-note{color:var(--muted);margin:4px 0}
+.fin-btn{max-width:360px}
+.confetti{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:50}
+.confetti i{position:absolute;top:-16px;width:10px;height:16px;border-radius:3px;opacity:0;animation:confFall linear forwards}
+@keyframes confFall{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(105vh) rotate(540deg);opacity:0}}
+.auth{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;justify-content:center;padding:24px 0}
+.auth-cat{align-self:center}
+.auth-cat svg{width:180px;height:auto;color:var(--cat-body)}
+.auth-title{text-align:center;font-size:28px;font-weight:900;margin:10px 0 18px}
+.prof-head{display:flex;align-items:center;gap:14px}
+.prof-head svg{width:96px;height:auto;flex:none;color:var(--cat-body)}
+.prof-head h2{margin:0;font-size:22px;font-weight:900}
+.prof-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:2px solid var(--border)}
+.prof-row:last-child{border-bottom:0}
+.prof-l{display:inline-flex;align-items:center;gap:8px}
+.prof-l svg{width:20px;height:20px}
+.seg{display:flex;gap:8px;margin-top:8px}
+.seg-b{flex:1;padding:10px;border:2px solid var(--border);border-radius:12px;background:transparent;color:var(--muted);font-family:inherit;font-weight:800;font-size:14px;cursor:pointer}
+.seg-b.on{border-color:var(--blue);color:var(--blue);background:rgba(28,176,246,.12)}
+@media(max-width:380px){.sb-stat{font-size:14px;gap:3px}.statusbar{gap:9px}.unit-banner b{font-size:18px}#bd{font-size:17px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style></head><body>
+<div id="app"></div>
+<nav id="nav" aria-label="Navigasi utama">
+<button class="tab" data-tab="learn"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.6 21.5 10.5V21a1 1 0 0 1-1 1h-5.6v-6.5h-5.8V22H3.5a1 1 0 0 1-1-1V10.5z"/></svg><span>Belajar</span></button>
+<button class="tab" data-tab="create"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg><span>Buat</span></button>
+<button class="tab" data-tab="profile"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 4a4 4 0 1 1 0 8 4 4 0 0 1 0-8zm0 10c4.4 0 8 2.2 8 5v2H4v-2c0-2.8 3.6-5 8-5z"/></svg><span>Profil</span></button>
+</nav>
 <script>
-const $=document.getElementById('app'),g=id=>document.getElementById(id);let token=localStorage.t;
+const $=document.getElementById('app'),g=id=>document.getElementById(id);
+const navEl=document.getElementById('nav');
+let token=localStorage.t;
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+/* Ikon SVG inline buatan sendiri */
+const starPath='M12 2.5l2.9 5.9 6.6 1-4.7 4.6 1.1 6.5L12 17.4l-5.9 3.1 1.1-6.5L2.5 9.4l6.6-1z';
+const starSvg=cls=>`<svg class="${cls}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${starPath}"/></svg>`;
+const IC={
+flame:`<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2c.3 2.6-1.2 4.2-2.6 5.8C8 9.4 6.5 11 6.5 13.5a5.5 5.5 0 0 0 11 0c0-1.5-.5-2.8-1.3-4-.4 1.1-1.2 1.9-2.3 2.2.8-2.9-.2-6.6-1.9-9.7z"/></svg>`,
+star:`<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${starPath}"/></svg>`,
+play:`<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.3v13.4a1 1 0 0 0 1.5.9l11-6.7a1 1 0 0 0 0-1.8l-11-6.7a1 1 0 0 0-1.5.9z"/></svg>`,
+lock:`<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a5 5 0 0 0-5 5v2h-.5A2.5 2.5 0 0 0 4 11.5v7A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5v-7A2.5 2.5 0 0 0 17.5 9H17V7a5 5 0 0 0-5-5zm-3 7V7a3 3 0 0 1 6 0v2z"/></svg>`,
+check:`<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.6 16.2 5.4 12l-1.4 1.4 5.6 5.6L21 7.6 19.6 6.2z"/></svg>`,
+trophy:`<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 2h12v7a6 6 0 0 1-12 0V2z"/><path d="M10.8 13h2.4v4H16v3H8v-3h2.8v-4z"/><path d="M18.5 4H22v1.5A4.5 4.5 0 0 1 17.5 10M5.5 4H2v1.5A4.5 4.5 0 0 0 6.5 10" fill="none" stroke="currentColor" stroke-width="2"/></svg>`,
+back:`<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15.4 4.6 8 12l7.4 7.4 1.6-1.6L11.2 12l5.8-5.8z"/></svg>`,
+down:`<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4.9 8.2 12 15.3l7.1-7.1 1.6 1.6L12 18.5 3.3 9.8z"/></svg>`,
+x:`<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6z"/></svg>`};
+/* Maskot kucing (sudah ada, warna kini mengikuti tema via CSS variables) */
+const catSvg=`<svg viewBox="0 0 120 72" role="img" aria-label="Kucing"><path d="M72 18 Q75 5 86 8 L96 19 Q105 18 111 28 L113 42 Q110 54 94 56 L54 56 Q38 55 33 45 Q28 35 38 29 L50 25 L57 13 Q61 8 66 17 Z" fill="var(--cat-body)"/><path d="M81 17 L86 12 L91 20" fill="var(--cat-face)"/><path d="M48 33 Q54 28 59 34 M70 33 Q76 28 81 34" fill="none" stroke="var(--cat-face)" stroke-width="2.5" stroke-linecap="round"/><path d="M62 40 Q66 44 70 40" fill="none" stroke="var(--cat-face)" stroke-width="2" stroke-linecap="round"/><path d="M38 48 Q25 53 18 47 Q13 43 17 39" fill="none" stroke="var(--cat-body)" stroke-width="7" stroke-linecap="round"/><path d="M52 54 L48 62 M88 55 L91 62" stroke="var(--cat-body)" stroke-width="7" stroke-linecap="round"/><text x="91" y="12" font-size="22" font-weight="900" fill="#a79bf7" stroke="var(--cat-body)" stroke-width=".7">?</text></svg>`;
 function renderRich(value,short=false){
   const original=String(value??'');
   const normalized=original.replace(/\\\[([\s\S]*?)\\\]/g,'$$$$$1$$$$').replace(/\\\(([\s\S]*?)\\\)/g,'$$$$$1$$$$');
@@ -111,47 +263,143 @@ async function api(p,body,method){
   const d=await r.json();if(r.status===401&&token){logout();}if(!r.ok)throw new Error(d.error);return d;
 }
 function logout(){localStorage.removeItem('t');token=null;login()}
-function statsHTML(me){return `<div class="stats" aria-label="Statistik belajar"><span class="stat stat-flame ${!me.active_today&&me.streak>0?'inactive':''}" title="${me.active_today?'Sudah belajar hari ini':'Belum belajar hari ini'}">🔥 <span>${esc(me.streak)}</span></span><span class="stat" title="Total XP">⭐ <span>${esc(me.xp)}</span></span></div>`;}
-function login(reg){
-  $.innerHTML=`<div class="card"><h2 class="c">${reg?'Daftar':'Masuk'}</h2><input id="u" placeholder="Username" autocapitalize="none"><input id="p" type="password" placeholder="Password"><button class="btn" id="go">${reg?'DAFTAR':'MASUK'}</button><p class="c link" id="sw">${reg?'Sudah punya akun? Masuk':'Belum punya akun? Daftar'}</p></div>`;
-  g('sw').onclick=()=>login(!reg);
-  g('go').onclick=async()=>{try{const d=await api(reg?'/register':'/login',{username:g('u').value,password:g('p').value});token=d.token;localStorage.t=token;home()}catch(e){alert(e.message)}};
+function setNav(tab){
+  if(!tab){navEl.style.display='none';document.body.classList.remove('nav-on');return}
+  navEl.style.display='flex';document.body.classList.add('nav-on');
+  navEl.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
 }
-async function home(){
-  const [cs,me]=await Promise.all([api('/courses'),api('/me')]);
-  $.innerHTML=`<div class="top"><h2 style="flex:1">Kamu penasaran tentang apa?</h2>${statsHTML(me)}<span class="link" id="lo">Keluar</span></div>
-  <textarea id="pr" rows="2" placeholder="Aku ingin belajar..."></textarea><button class="btn" id="mk">BUAT ROADMAP</button>
-  ${cs.map(c=>`<div class="card" data-id="${c.id}" style="cursor:pointer"><b>${esc(c.title)}</b><br><small>${esc(c.done)}/${esc(c.total)} pelajaran</small></div>`).join('')}`;
-  g('lo').onclick=logout;
+navEl.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{if(t.dataset.tab==='learn')learn();else if(t.dataset.tab==='create')createScr();else profile()});
+function setTheme(t){try{localStorage.setItem('theme',t)}catch(e){}document.documentElement.dataset.theme=t;profile()}
+function confetti(){
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const colors=['#58cc02','#ffc800','#1cb0f6','#ff9600','#a79bf7'];
+  const wrap=document.createElement('div');wrap.className='confetti';wrap.setAttribute('aria-hidden','true');
+  for(let n=0;n<20;n++){const s=document.createElement('i');s.style.left=(Math.random()*96)+'%';s.style.background=colors[n%colors.length];s.style.animationDelay=(Math.random()*.8)+'s';s.style.animationDuration=(2.2+Math.random()*1.5)+'s';wrap.appendChild(s)}
+  $.appendChild(wrap);setTimeout(()=>wrap.remove(),4500);
+}
+function login(reg){
+  setNav(null);
+  $.innerHTML=`<div class="auth"><div class="auth-cat">${catSvg}</div><h1 class="auth-title">${reg?'Daftar':'Masuk'}</h1><input id="u" placeholder="Username" autocapitalize="none"><input id="p" type="password" placeholder="Password"><button class="btn btn-green" id="go">${reg?'DAFTAR':'MASUK'}</button><p class="c"><span class="link" id="sw">${reg?'Sudah punya akun? Masuk':'Belum punya akun? Daftar'}</span></p></div>`;
+  g('sw').onclick=()=>login(!reg);
+  g('go').onclick=async()=>{try{const d=await api(reg?'/register':'/login',{username:g('u').value,password:g('p').value});token=d.token;localStorage.t=token;learn()}catch(e){alert(e.message)}};
+}
+async function learn(){
+  setNav('learn');
+  const cs=await api('/courses');
+  $.innerHTML=`<div class="page"><h1 class="page-title">Belajar</h1>
+  ${cs.length?cs.map(c=>{const pct=c.total?Math.round(c.done/c.total*100):0;return `<div class="card" data-id="${c.id}" role="button" tabindex="0" style="cursor:pointer"><b>${esc(c.title)}</b><div class="pbar-track"><i style="width:${pct}%"></i></div><small class="muted">${esc(c.done)}/${esc(c.total)} pelajaran</small></div>`}).join(''):`<p class="muted c" style="margin-top:40px">Belum ada kursus.<br>Buat lewat tab <b>Buat</b>!</p>`}</div>`;
   $.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>course(el.dataset.id));
+}
+function createScr(){
+  setNav('create');
+  $.innerHTML=`<div class="page"><h1 class="page-title">Buat Roadmap</h1><p class="muted">Tulis topik apa pun yang ingin kamu kuasai — AI akan menyusun jalur belajarnya.</p><textarea id="pr" rows="3" placeholder="Aku ingin belajar..."></textarea><button class="btn btn-green" id="mk">BUAT ROADMAP</button></div>`;
   g('mk').onclick=async()=>{const p=g('pr').value.trim();if(!p)return;g('mk').disabled=true;g('mk').textContent='Menyusun roadmap...';
-    try{const d=await api('/courses',{prompt:p});course(d.id)}catch(e){alert(e.message);home()}};
+    try{const d=await api('/courses',{prompt:p});course(d.id)}catch(e){alert(e.message);createScr()}};
+}
+async function profile(){
+  setNav('profile');
+  const me=await api('/me');
+  const cur=document.documentElement.dataset.theme||'dark';
+  $.innerHTML=`<div class="page"><h1 class="page-title">Profil</h1>
+  <div class="card prof-head">${catSvg}<h2>${esc(me.username||'Pengguna')}</h2></div>
+  <div class="card">
+    <div class="prof-row"><span class="prof-l">${IC.star} Total XP</span><b>${esc(me.xp)}</b></div>
+    <div class="prof-row"><span class="prof-l">${IC.flame} Streak</span><b>${esc(me.streak)} hari</b></div>
+    ${me.best_streak!=null?`<div class="prof-row"><span class="prof-l">${IC.flame} Streak terbaik</span><b>${esc(me.best_streak)} hari</b></div>`:''}
+    <div class="prof-row"><span class="prof-l">Hari ini</span><b>${me.active_today?'Sudah belajar ✓':'Belum belajar'}</b></div>
+  </div>
+  <div class="card"><div class="prof-row" style="border-bottom:0"><span class="prof-l">Tema</span></div>
+  <div class="seg"><button class="seg-b ${cur==='dark'?'on':''}" id="th-dark">Gelap</button><button class="seg-b ${cur==='light'?'on':''}" id="th-light">Terang</button></div></div>
+  <button class="btn btn-red" id="lo">KELUAR</button></div>`;
+  g('th-dark').onclick=()=>setTheme('dark');
+  g('th-light').onclick=()=>setTheme('light');
+  g('lo').onclick=logout;
 }
 async function course(id){
-  const [c,me]=await Promise.all([api('/courses/'+id),api('/me')]);let last=-1,open=c.lessons.findIndex(l=>!l.done),h='';
+  setNav('learn');
+  const [c,me]=await Promise.all([api('/courses/'+id),api('/me')]);
+  if(!c.lessons.length){$.innerHTML=`<div class="statusbar"><button class="icon-btn" id="bk" aria-label="Kembali">${IC.back}</button></div><p class="muted c" style="margin-top:40px">Belum ada pelajaran.</p>`;g('bk').onclick=learn;return}
+  const open=c.lessons.findIndex(l=>!l.done);
+  const offs=[0,-40,-64,-40,0,40,64,40];
+  let last=null,secs=[];
   c.lessons.forEach((l,i)=>{
-    if(l.unit_idx!==last){last=l.unit_idx;h+=`<div class="unit">${esc(Number(l.unit_idx)+1)}. ${esc(l.unit_title)}</div>`}
-    const st=l.done?'done':(i===open?'':'lock'),ic=l.done?'✓':(i===open?'▶':'🔒'),off=[0,40,70,40,0][i%5];
-    h+=`<div class="node" style="margin-left:${off}px"><button class="dot ${st}" ${st==='lock'?'disabled':''} data-l="${esc(l.id)}">${ic}</button><span>${esc(l.title)}</span></div>`;
+    const u=Number(l.unit_idx);
+    if(last===null||u!==last){last=u;secs.push({n:u+1,t:l.unit_title,nodes:''})}
+    const s=secs[secs.length-1];
+    const isLastOfUnit=(i===c.lessons.length-1)||(Number(c.lessons[i+1].unit_idx)!==u);
+    const st=l.done?'done':(i===open?'active':'lock');
+    const off=offs[i%8];
+    const sc=Number(l.score||0),qt=Number(l.quiz_total||0);
+    let stars='';
+    if(l.done){
+      const n=qt>0?(sc>=qt?3:(sc/qt>=0.6?2:1)):3;
+      stars='<span class="node-stars">'+[0,1,2].map(k=>starSvg(k<n?'on':'off')).join('')+'</span>';
+    }
+    const ic=isLastOfUnit?IC.trophy:(st==='done'?IC.check:(st==='active'?IC.play:IC.lock));
+    const catSide=off>0?'left':'right';
+    s.nodes+=`<div class="node-wrap" style="transform:translateX(${off}px)">
+      ${i===open?'<span class="bubble-start">MULAI</span>':''}
+      <button class="node-btn ${st}" ${st==='lock'?'disabled':''} data-l="${esc(l.id)}" aria-label="${esc(l.title)}">${ic}</button>
+      ${stars}
+      ${i===open?`<span class="node-cat ${catSide}">${catSvg}</span>`:''}
+    </div>`;
   });
-  $.innerHTML=`<div class="top"><button class="x" id="bk">←</button><h2 style="flex:1;min-width:0">${esc(c.title)}</h2>${statsHTML(me)}</div>${h}`;
-  g('bk').onclick=home;$.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>lesson(b.dataset.l,id));
+  $.innerHTML=`<div class="statusbar">
+    <button class="icon-btn" id="bk" aria-label="Kembali">${IC.back}</button>
+    <span class="sb-sp"></span>
+    <span class="sb-stat sb-flame ${!me.active_today&&me.streak>0?'off':''}" title="${me.active_today?'Sudah belajar hari ini':'Belum belajar hari ini'}">${IC.flame}<span>${esc(me.streak)}</span></span>
+    <span class="sb-stat sb-xp" title="Total XP">${IC.star}<span>${esc(me.xp)}</span></span>
+  </div>
+  <div class="unit-banner"><small id="ub-n">UNIT ${esc(secs[0].n)}</small><b id="ub-t">${esc(secs[0].t)}</b></div>
+  <h1 class="page-title crs-title">${esc(c.title)}</h1>
+  ${secs.map(s=>`<section class="unit-sec" data-n="${esc(s.n)}" data-t="${esc(s.t)}"><div class="path">${s.nodes}</div></section>`).join('')}
+  <button class="jump" id="jump" aria-label="Ke pelajaran aktif">${IC.down}</button>`;
+  g('bk').onclick=learn;
+  $.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>lesson(b.dataset.l,id));
+  const io=new IntersectionObserver(es=>{
+    es.forEach(e=>{if(e.isIntersecting){g('ub-n').textContent='UNIT '+e.target.dataset.n;g('ub-t').textContent=e.target.dataset.t}});
+  },{rootMargin:'-64px 0px -55% 0px'});
+  $.querySelectorAll('.unit-sec').forEach(s=>io.observe(s));
+  const act=$.querySelector('.node-btn.active'),jump=g('jump');
+  const rm=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const toAct=()=>act&&act.scrollIntoView({behavior:rm?'auto':'smooth',block:'center'});
+  if(act){
+    setTimeout(toAct,120);
+    const upd=()=>{if(!act.isConnected||!jump.isConnected){removeEventListener('scroll',upd);return}
+      const r=act.getBoundingClientRect();
+      jump.style.display=(r.top>70&&r.bottom<innerHeight-100)?'none':'flex'};
+    addEventListener('scroll',upd,{passive:true});setTimeout(upd,150);
+    jump.onclick=toAct;
+  }else jump.style.display='none';
 }
 function lesson(id,cid){
-  $.innerHTML='<p class="c">Menyiapkan materi, tunggu sebentar...</p>';
+  setNav(null);
+  $.innerHTML='<p class="c muted" style="margin-top:40px">Menyiapkan materi, tunggu sebentar...</p>';
   api('/lessons/'+id+'/open',{}).then(async L=>{
     const askHistory=await api('/lessons/'+id+'/ask-history').catch(e=>{console.error(e);return []});
     let askDraft='',askPending=false;
     const originalBodyOverflow=document.body.style.overflow;
-    let i=0;
+    let i=0,prevPct=0;
     const quizAnswers={};
     let sheetOpen=false;
     const finish=()=>api('/lessons/'+id+'/complete',{}).then(r=>{
-      const details=r.xp_gained>0?`<p>Pelajaran: <b>+${esc(r.xp_lesson_gained)} XP</b></p>${r.xp_perfect_gained>0?`<p>Bonus sempurna: <b>+${esc(r.xp_perfect_gained)} XP</b></p>`:''}`:`<p>Pelajaran ini sudah pernah diselesaikan, tidak ada XP tambahan.</p>`;
-      $.innerHTML=`<div class="card c"><h2>Selesai! 🎉</h2><p>Skor kuis: ${esc(r.score)}/${esc(r.total)}</p>${details}<p>XP didapat: <b>+${esc(r.xp_gained)} XP</b></p><p>⭐ Total XP: <b>${esc(r.xp)}</b></p><p>🔥 Streak: <b>${esc(r.streak)} hari</b></p>${r.streak_increased?`<p class="streak-pop">🔥 Streak naik jadi ${esc(r.streak)} hari!</p>`:''}<button class="btn" id="b">KEMBALI</button></div>`;
+      const repeat=r.xp_gained>0?`<p class="fin-note">Pelajaran: <b>+${esc(r.xp_lesson_gained)} XP</b>${r.xp_perfect_gained>0?` · Bonus sempurna: <b>+${esc(r.xp_perfect_gained)} XP</b>`:''}</p>`:`<p class="fin-note">Pelajaran ini sudah pernah diselesaikan, tidak ada XP tambahan.</p>`;
+      $.innerHTML=`<div class="fin">
+        <div class="fin-cat">${catSvg}</div>
+        <h1>Pelajaran Selesai!</h1>
+        <div class="fin-stats">
+          <div class="fstat"><div class="fstat-h gold">XP</div><div class="fstat-v">+${esc(r.xp_gained)}</div></div>
+          <div class="fstat"><div class="fstat-h green">Skor</div><div class="fstat-v">${esc(r.score)}/${esc(r.total)}</div></div>
+          <div class="fstat"><div class="fstat-h orange">Streak</div><div class="fstat-v">${esc(r.streak)}</div></div>
+        </div>
+        ${repeat}
+        <p class="fin-note">⭐ Total XP: <b>${esc(r.xp)}</b></p>
+        <p class="fin-note ${r.streak_increased?'streak-pop':''}">${r.streak_increased?`🔥 Streak naik jadi ${esc(r.streak)} hari!`:''}</p>
+        <button class="btn btn-green fin-btn" id="b">LANJUT</button>
+      </div>`;
+      confetti();
       g('b').onclick=()=>course(cid);
     }).catch(e=>alert(e.message));
-    const catSvg=`<svg viewBox="0 0 120 72" role="img" aria-label="Kucing bingung"><path d="M72 18 Q75 5 86 8 L96 19 Q105 18 111 28 L113 42 Q110 54 94 56 L54 56 Q38 55 33 45 Q28 35 38 29 L50 25 L57 13 Q61 8 66 17 Z" fill="#0d1520"/><path d="M81 17 L86 12 L91 20" fill="#fff"/><path d="M48 33 Q54 28 59 34 M70 33 Q76 28 81 34" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/><path d="M62 40 Q66 44 70 40" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/><path d="M38 48 Q25 53 18 47 Q13 43 17 39" fill="none" stroke="#0d1520" stroke-width="7" stroke-linecap="round"/><path d="M52 54 L48 62 M88 55 L91 62" stroke="#0d1520" stroke-width="7" stroke-linecap="round"/><text x="91" y="12" font-size="22" font-weight="900" fill="#a79bf7" stroke="#0d1520" stroke-width=".7">?</text></svg>`;
     const catShake=()=>{const c=g('cat-help');if(!c)return;c.classList.remove('shake');void c.offsetWidth;c.classList.add('shake')};
     const scrollAskBottom=()=>{const list=document.querySelector('#ask-overlay .ask-messages');if(list)list.scrollTop=list.scrollHeight};
     const addAskMessage=(m)=>{
@@ -218,8 +466,9 @@ function lesson(id,cid){
     const show=()=>{
       if(i>=L.blocks.length)return finish();
       const b=L.blocks[i],saved=quizAnswers[i];
-      const dots=L.blocks.map((_,n)=>`<span class="lesson-dot ${n===i?'active':''}" aria-label="Blok ${n+1}"></span>`).join('');
-      $.innerHTML=`<div class="top"><button class="x" id="x" aria-label="Keluar pelajaran">✕</button><b style="flex:1;text-align:center;font-size:14px">PELAJARAN</b><span style="width:28px"></span></div><div class="lesson-dots" aria-label="Progres pelajaran">${dots}</div><div class="card" id="bd"></div><div id="fb"></div><div class="spacer" aria-hidden="true"></div><button class="cat-bubble" id="cat-help" aria-label="Tanya tutor AI">${catSvg}</button><div class="lesson-nav"><button class="btn sec lesson-prev" id="prev" aria-label="Blok sebelumnya" ${i===0?'disabled':''}>&lt;</button><button class="btn lesson-next" id="nx" ${b.type==='quiz'&&!saved?'style="display:none"':''}>LANJUT &gt;</button></div>`;
+      const pct=Math.round(((i+1)/L.blocks.length)*100);
+      $.innerHTML=`<div class="l-head"><button class="icon-btn" id="x" aria-label="Keluar pelajaran">${IC.x}</button><div class="pbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i id="pfill"></i></div></div><div id="bd" class="material"></div><div id="fb"></div><div class="spacer" aria-hidden="true"></div><button class="cat-bubble" id="cat-help" aria-label="Tanya tutor AI">${catSvg}</button><div class="lesson-nav"><button class="btn btn-ghost lesson-prev" id="prev" aria-label="Blok sebelumnya" ${i===0?'disabled':''}>${IC.back}</button><button class="btn btn-green lesson-next" id="nx" ${b.type==='quiz'&&!saved?'style="display:none"':''}>LANJUT</button></div>`;
+      const pf=g('pfill');pf.style.width=prevPct+'%';requestAnimationFrame(()=>{pf.style.width=pct+'%'});prevPct=pct;
       g('x').onclick=()=>course(cid);
       g('prev').onclick=()=>{if(i>0){i--;show()}};
       g('nx').onclick=()=>{i++;show()};
@@ -230,7 +479,9 @@ function lesson(id,cid){
         g('bd').innerHTML=`<h3>${renderRich(b.question,true)}</h3>`+(b.options||[]).map((o,k)=>`<button class="opt" data-k="${k}">${renderRich(o,true)}</button>`).join('');
         if(saved){
           g('bd').querySelectorAll('.opt').forEach((o,j)=>{o.disabled=true;if(j===saved.correct)o.classList.add('ok');else if(j===saved.chosen&&!saved.is_correct)o.classList.add('no')});
-          g('fb').innerHTML=`<p class="fb" id="feedback-text">${saved.is_correct?'✅ Benar!':'❌ Kurang tepat.'} ${renderRich(saved.explanation||'',true)}</p>`;
+          g('fb').className=saved.is_correct?'good':'bad';
+          g('fb').innerHTML=`<b class="fb-t">${saved.is_correct?'Benar!':'Kurang tepat.'}</b> ${renderRich(saved.explanation||'',true)}`;
+          if(!saved.is_correct)g('nx').classList.add('btn-red');
         }else{
           g('bd').querySelectorAll('.opt').forEach(el=>el.onclick=async()=>{
             if(quizAnswers[i])return;
@@ -239,8 +490,11 @@ function lesson(id,cid){
               const r=await api('/lessons/'+id+'/answer',{quiz_idx:i,chosen:k});
               quizAnswers[i]={chosen:k,correct:r.correct,is_correct:!!r.is_correct,explanation:r.explanation||''};
               g('bd').querySelectorAll('.opt').forEach((o,j)=>{if(j===r.correct)o.classList.add('ok');else if(j===k)o.classList.add('no')});
-              g('fb').innerHTML=`<p class="fb" id="feedback-text">${r.is_correct?'✅ Benar!':'❌ Kurang tepat.'} ${renderRich(r.explanation||'',true)} ${Number(r.xp_gained)>0?`<span class="xp-pop">+${esc(r.xp_gained)} XP</span>`:''}</p>`;
+              g('fb').className=r.is_correct?'good':'bad';
+              g('fb').innerHTML=`<b class="fb-t">${r.is_correct?'Benar!':'Kurang tepat.'}</b> ${renderRich(r.explanation||'',true)} ${Number(r.xp_gained)>0?`<span class="xp-pop">+${esc(r.xp_gained)} XP</span>`:''}`;
               g('nx').style.display='block';
+              if(r.is_correct){g('nx').classList.remove('btn-red');try{navigator.vibrate&&navigator.vibrate(30)}catch(_){}}
+              else{g('nx').classList.add('btn-red');try{navigator.vibrate&&navigator.vibrate([40,40,40])}catch(_){}}
               if(!r.is_correct)catShake();
               g('fb').scrollIntoView({behavior:'smooth',block:'center'});
             }catch(e){g('bd').querySelectorAll('.opt').forEach(o=>o.disabled=false);alert(e.message||'Jawaban gagal dikirim. Coba lagi ya.')}
@@ -251,5 +505,5 @@ function lesson(id,cid){
     show();
   }).catch(e=>{alert(e.message);course(cid)});
 }
-token?home().catch(login):login();
+token?learn().catch(login):login();
 </script></body></html>

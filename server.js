@@ -98,8 +98,12 @@ app.post('/api/courses',auth,wrap(async(q,s)=>{
 app.get('/api/courses/:id',auth,wrap(async(q,s)=>{
   const [[c]]=await pool.query('SELECT id,title FROM courses WHERE id=? AND user_id=?',[q.params.id,q.uid]);
   if(!c)return s.status(404).json({error:'Tidak ditemukan'});
-  const [l]=await pool.query('SELECT id,unit_idx,unit_title,title,(completed_at IS NOT NULL) done FROM lessons WHERE course_id=? ORDER BY id',[c.id]);
-  s.json({...c,lessons:l});
+  const [l]=await pool.query('SELECT id,unit_idx,unit_title,title,(completed_at IS NOT NULL) done,score,content FROM lessons WHERE course_id=? ORDER BY id',[c.id]);
+  s.json({...c,lessons:l.map(({content,...row})=>{
+    let quiz_total=0;
+    if(content){try{quiz_total=(JSON.parse(content)||[]).filter(b=>b&&b.type==='quiz').length}catch(e){quiz_total=0}}
+    return {...row,score:Number(row.score)||0,quiz_total};
+  })});
 }));
 
 // ---------- Lesson ----------
