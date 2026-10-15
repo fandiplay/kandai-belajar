@@ -198,6 +198,11 @@ overflow-wrap:anywhere;word-break:break-word;line-height:1.5;overflow:visible;cu
 .seg-b.on{border-color:var(--blue);color:var(--blue);background:rgba(28,176,246,.12)}
 @media(max-width:380px){.sb-stat{font-size:14px;gap:3px}.statusbar{gap:9px}.unit-banner b{font-size:18px}#bd{font-size:17px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+.learn-back{display:flex;align-items:center;gap:8px;margin:10px 0 22px;padding:9px 14px;min-height:42px;font-size:14px}
+#cat-loading{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:rgba(10,18,22,.94);color:#fff;font-size:17px}
+.cat-loader{font-size:64px;animation:cat-hop .62s ease-in-out infinite alternate;transform-origin:center bottom}
+@keyframes cat-hop{from{transform:translateY(0) rotate(-8deg)}to{transform:translateY(-34px) rotate(8deg)}}
 </style></head><body>
 <div id="app"></div>
 <nav id="nav" aria-label="Navigasi utama">
@@ -283,12 +288,22 @@ function login(reg){
   g('sw').onclick=()=>login(!reg);
   g('go').onclick=async()=>{try{const d=await api(reg?'/register':'/login',{username:g('u').value,password:g('p').value});token=d.token;localStorage.t=token;learn()}catch(e){alert(e.message)}};
 }
+function showCatLoading(){
+  hideCatLoading();
+  const o=document.createElement('div');o.id='cat-loading';o.innerHTML='<div class="cat-loader" aria-hidden="true">🐈</div><b>Menyiapkan pelajaran...</b>';
+  document.body.appendChild(o);
+}
+function hideCatLoading(){document.getElementById('cat-loading')?.remove()}
 async function learn(){
   setNav('learn');
   const cs=await api('/courses');
-  $.innerHTML=`<div class="page"><h1 class="page-title">Belajar</h1>
+  $.innerHTML=`<div class="page"><h1 class="page-title">Dari KANDI Jadi PANDAI</h1><button class="btn btn-ghost learn-back" id="learn-back">${IC.back} KEMBALI</button>
   ${cs.length?cs.map(c=>{const pct=c.total?Math.round(c.done/c.total*100):0;return `<div class="card" data-id="${c.id}" role="button" tabindex="0" style="cursor:pointer"><b>${esc(c.title)}</b><div class="pbar-track"><i style="width:${pct}%"></i></div><small class="muted">${esc(c.done)}/${esc(c.total)} pelajaran</small></div>`}).join(''):`<p class="muted c" style="margin-top:40px">Belum ada kursus.<br>Buat lewat tab <b>Buat</b>!</p>`}</div>`;
-  $.querySelectorAll('[data-id]').forEach(el=>el.onclick=()=>course(el.dataset.id));
+  g('learn-back').onclick=()=>{if(history.length>1)history.back();else setNav('create')};
+  $.querySelectorAll('[data-id]').forEach(el=>{
+    const start=async()=>{showCatLoading();try{await course(el.dataset.id)}catch(e){alert(e.message||'Gagal membuka pelajaran')}finally{hideCatLoading()}};
+    el.onclick=start;el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();start()}};
+  });
 }
 function createScr(){
   setNav('create');
