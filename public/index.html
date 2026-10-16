@@ -500,21 +500,28 @@ function lesson(id,cid){
         }else{
           g('bd').querySelectorAll('.opt').forEach(el=>el.onclick=async()=>{
             if(quizAnswers[i])return;
-            const k=+el.dataset.k;g('bd').querySelectorAll('.opt').forEach(o=>o.disabled=true);
+            const k=+el.dataset.k, options=g('bd').querySelectorAll('.opt'), feedback=g('fb');
+            options.forEach(o=>{o.disabled=true;o.classList.toggle('selected-pending',o===el)});
+            feedback.className='pending';
+            feedback.textContent='Memeriksa jawaban…';
+            g('nx').style.display='none';
             try{
               const r=await api('/lessons/'+id+'/answer',{quiz_idx:i,chosen:k});
               quizAnswers[i]={chosen:k,correct:r.correct,is_correct:!!r.is_correct,explanation:r.explanation||''};
-              g('bd').querySelectorAll('.opt').forEach((o,j)=>{if(j===r.correct)o.classList.add('ok');else if(j===k)o.classList.add('no')});
-              g('fb').className=r.is_correct?'good':'bad';
-              g('fb').innerHTML=`<b class="fb-t">${r.is_correct?'Benar!':'Kurang tepat.'}</b> ${renderRich(r.explanation||'',true)} ${Number(r.xp_gained)>0?`<span class="xp-pop">+${esc(r.xp_gained)} XP</span>`:''}`;
+              options.forEach((o,j)=>{o.classList.remove('selected-pending');if(j===r.correct)o.classList.add('ok');else if(j===k)o.classList.add('no')});
+              feedback.className=r.is_correct?'good':'bad';
+              feedback.innerHTML=`<b class="fb-t">${r.is_correct?'Benar!':'Kurang tepat.'}</b> ${renderRich(r.explanation||'',true)} ${Number(r.xp_gained)>0?`<span class="xp-pop">+${esc(r.xp_gained)} XP</span>`:''}`;
               g('nx').style.display='block';
               if(r.is_correct){g('nx').classList.remove('btn-red');try{navigator.vibrate&&navigator.vibrate(30)}catch(_){}}
               else{g('nx').classList.add('btn-red');try{navigator.vibrate&&navigator.vibrate([40,40,40])}catch(_){}}
               if(!r.is_correct)catShake();
-              g('fb').scrollIntoView({behavior:'smooth',block:'center'});
-            }catch(e){g('bd').querySelectorAll('.opt').forEach(o=>o.disabled=false);alert(e.message||'Jawaban gagal dikirim. Coba lagi ya.')}
-          });
-        }
+              feedback.scrollIntoView({behavior:'smooth',block:'center'});
+            }catch(e){
+              options.forEach(o=>{o.disabled=false;o.classList.remove('selected-pending')});
+              feedback.className='bad';
+              feedback.textContent=e.message||'Jawaban gagal dikirim. Coba lagi ya.';
+            }
+          });        }
       }
     };
     show();
