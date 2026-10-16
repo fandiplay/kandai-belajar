@@ -1,5 +1,6 @@
 <!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Belajar AI</title>
-<script>try{var _th=localStorage.getItem('theme');if(_th)document.documentElement.setAttribute('data-theme',_th)}catch(e){}</script>
+<meta name="theme-color" content="#131f24" id="theme-color-meta">
+<script>try{var _th=localStorage.getItem('theme');if(_th)document.documentElement.setAttribute('data-theme',_th);document.querySelector('meta[name="theme-color"]')?.setAttribute('content',_th==='light'?'#ffffff':'#131f24')}catch(e){}</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
@@ -8,12 +9,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
 <style>
 /* ===== LANGKAH 1: Design tokens ===== */
-:root{--bg:#131f24;--card:#1f2c34;--border:#37464f;--border-d:#2b3841;--text:#ffffff;--muted:#afafaf;
+:root{color-scheme:dark;--bg:#131f24;--card:#1f2c34;--border:#37464f;--border-d:#2b3841;--text:#ffffff;--muted:#afafaf;
 --green:#58cc02;--green-d:#58a700;--gold:#ffc800;--gold-d:#e5a800;--blue:#1cb0f6;--blue-d:#1899d6;
 --red:#ff4b4b;--red-d:#ea2b2b;--orange:#ff9600;--purple:#a79bf7;--cat-body:#ffffff;--cat-face:#131f24}
-:root[data-theme="light"]{--bg:#ffffff;--card:#f7f7f7;--border:#e5e5e5;--border-d:#cfcfcf;--text:#3c3c3c;--muted:#777777;--cat-body:#0d1520;--cat-face:#ffffff}
+:root[data-theme="light"]{color-scheme:light;--bg:#ffffff;--card:#f7f7f7;--border:#e5e5e5;--border-d:#cfcfcf;--text:#3c3c3c;--muted:#777777;--cat-body:#0d1520;--cat-face:#ffffff}
 *{box-sizing:border-box;min-width:0}
-html{max-width:100%;overflow-x:hidden}
+html{max-width:100%;overflow-x:hidden;background:var(--bg);color-scheme:dark}\nhtml[data-theme="light"]{color-scheme:light;background:var(--bg)}
 body{margin:0;width:100%;max-width:520px;margin-left:auto;margin-right:auto;overflow-x:clip;background:var(--bg);color:var(--text);
 font-family:"Nunito",system-ui,-apple-system,"Segoe UI",sans-serif;font-weight:600;min-height:100vh;min-height:100dvh}
 @supports(height:100dvh){body{min-height:100dvh}}
@@ -58,6 +59,30 @@ overflow-wrap:anywhere;word-break:break-word;line-height:1.5;overflow:visible;cu
 .tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border:2px solid transparent;border-radius:14px;background:transparent;color:var(--muted);font-family:inherit;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;cursor:pointer}
 .tab svg{width:24px;height:24px}
 .tab.active{background:var(--card);border-color:var(--blue);color:var(--blue)}
+/* Pencarian, kartu kursus, dan menu pengelolaan */
+.course-tools{display:flex;align-items:center;gap:8px;margin:10px 0 14px}
+.course-search-wrap{position:relative;flex:1;min-width:0}
+.course-search{margin:0;padding:11px 42px 11px 12px;min-height:46px}
+.course-search-clear{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:30px;height:30px;border:0;border-radius:50%;background:transparent;color:var(--muted);font-size:22px;line-height:1;cursor:pointer}
+.course-card{position:relative;padding:14px 48px 14px 14px;cursor:pointer}
+.course-card-title{display:flex;align-items:flex-start;gap:7px;font-size:16px;font-weight:900;line-height:1.35;overflow-wrap:anywhere}
+.course-pin{flex:none;color:var(--green);font-size:15px;line-height:1.35}
+.course-menu-trigger{position:absolute;right:8px;top:8px;width:36px;height:36px;border:1px solid var(--border);border-radius:12px;background:var(--bg);color:var(--text);font-size:22px;line-height:1;cursor:pointer}
+.course-card .pbar-track{margin-top:12px}
+.course-pagination{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:20px 0 12px}
+.course-pagination button{flex:1;min-width:0;margin:0;padding:10px 7px;font-size:12px;letter-spacing:0}
+.course-page-label{flex:1.15;text-align:center;font-size:12px;line-height:1.4;color:var(--muted)}
+.course-empty{padding:26px 12px;text-align:center;line-height:1.6;color:var(--muted)}
+.course-menu-backdrop{position:fixed;inset:0;z-index:1000;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.5);opacity:0;transition:opacity .18s}
+.course-menu-backdrop.open{opacity:1}
+.course-menu-sheet{width:min(100%,520px);padding:10px 16px calc(18px + env(safe-area-inset-bottom));border-radius:22px 22px 0 0;border:1px solid var(--border);background:var(--card);color:var(--text);transform:translateY(18px);transition:transform .18s}
+.course-menu-backdrop.open .course-menu-sheet{transform:translateY(0)}
+.course-menu-grab{width:38px;height:4px;border-radius:99px;background:var(--border);margin:2px auto 14px}
+.course-menu-title{margin:0 0 12px;font-size:18px;overflow-wrap:anywhere}
+.course-menu-action{display:flex;align-items:center;gap:12px;width:100%;padding:14px 10px;border:0;border-radius:12px;background:transparent;color:var(--text);font:800 15px inherit;text-align:left;cursor:pointer}
+.course-menu-action:active{background:var(--bg)}
+.course-menu-action.danger{color:var(--red)}
+@media(max-width:380px){.course-card{padding-left:12px}.course-pagination button{font-size:11px;padding:9px 4px}.course-page-label{font-size:11px}}
 /* Kartu kursus */
 .pbar-track{height:14px;border-radius:99px;background:var(--border);overflow:hidden;margin:10px 0 6px}
 .pbar-track i{display:block;height:100%;background:var(--green);border-radius:99px;box-shadow:inset 0 3px 0 rgba(255,255,255,.25)}
@@ -274,7 +299,7 @@ function setNav(tab){
   navEl.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
 }
 navEl.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{if(t.dataset.tab==='learn')learn();else if(t.dataset.tab==='create')createScr();else profile()});
-function setTheme(t){try{localStorage.setItem('theme',t)}catch(e){}document.documentElement.dataset.theme=t;profile()}
+function setTheme(t){try{localStorage.setItem('theme',t)}catch(e){}document.documentElement.dataset.theme=t;document.querySelector('meta[name="theme-color"]')?.setAttribute('content',t==='light'?'#ffffff':'#131f24');profile()}
 function confetti(){
   if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
   const colors=['#58cc02','#ffc800','#1cb0f6','#ff9600','#a79bf7'];
@@ -294,16 +319,96 @@ function showCatLoading(){
   document.body.appendChild(o);
 }
 function hideCatLoading(){document.getElementById('cat-loading')?.remove()}
+let courseSearchQuery='',courseSearchPage=1,courseSearchTimer=null,courseSearchRequest=0;
+async function loadCourseList(page=courseSearchPage){
+  courseSearchPage=Math.max(1,Number(page)||1);
+  const requestId=++courseSearchRequest;
+  const query=courseSearchQuery.trim();
+  const data=await api('/courses?q='+encodeURIComponent(query)+'&page='+courseSearchPage);
+  if(requestId!==courseSearchRequest)return;
+  courseSearchPage=data.page;
+  const items=Array.isArray(data.items)?data.items:[];
+  const cards=items.map(c=>{
+    const pct=c.total?Math.round(c.done/c.total*100):0;
+    return `<div class="card course-card" data-course-card="${esc(c.id)}" role="button" tabindex="0" aria-label="Buka kursus ${esc(c.title)}">
+      <div class="course-card-title">${c.pinned?'<span class="course-pin" aria-label="Disematkan" title="Disematkan">📌</span>':''}<span>${esc(c.title)}</span></div>
+      <button type="button" class="course-menu-trigger" data-course-menu="${esc(c.id)}" aria-label="Kelola kursus ${esc(c.title)}">⋮</button>
+      <div class="pbar-track"><i style="width:${pct}%"></i></div>
+      <small class="muted">${esc(c.done)}/${esc(c.total)} pelajaran</small>
+    </div>`;
+  }).join('');
+  const empty=query
+    ?`<div class="course-empty"><b>Tidak ada kursus yang cocok.</b><br>Coba kata kunci lain atau hapus pencarian.</div>`
+    :`<div class="course-empty"><b>Belum ada kursus.</b><br>Buat kursus pertama lewat tab <b>Buat</b>!</div>`;
+  const pageControls=`<div class="course-pagination">
+    <button type="button" class="btn btn-ghost" id="course-prev" ${data.page<=1?'disabled':''}>Sebelumnya</button>
+    <span class="course-page-label">Halaman ${esc(data.page)} dari ${esc(data.pages)}</span>
+    <button type="button" class="btn btn-ghost" id="course-next" ${data.page>=data.pages?'disabled':''}>Berikutnya</button>
+  </div>`;
+  const inputValue=esc(query);
+  $.innerHTML=`<div class="page"><h1 class="page-title">Dari KANDI Jadi PANDAI</h1>
+    <button class="btn btn-ghost learn-back" id="learn-back">${IC.back} KEMBALI</button>
+    <div class="course-tools"><div class="course-search-wrap">
+      <input class="course-search" id="course-search" type="search" maxlength="200" placeholder="Cari kursus..." value="${inputValue}" aria-label="Cari kursus">
+      <button class="course-search-clear" id="course-search-clear" type="button" aria-label="Hapus pencarian" ${query?'':'hidden'}>×</button>
+    </div></div>
+    <div id="course-list">${cards||empty}</div>${pageControls}</div>`;
+  g('learn-back').onclick=()=>{if(history.length>1)history.back();else setNav('create')};
+  const input=g('course-search'),clear=g('course-search-clear');
+  input.addEventListener('input',()=>{
+    courseSearchQuery=input.value;
+    clear.hidden=!input.value;
+    clearTimeout(courseSearchTimer);
+    courseSearchTimer=setTimeout(()=>{courseSearchPage=1;loadCourseList(1).catch(e=>alert(e.message||'Gagal mencari kursus'))},300);
+  });
+  clear.onclick=()=>{input.value='';courseSearchQuery='';clear.hidden=true;clearTimeout(courseSearchTimer);courseSearchPage=1;loadCourseList(1).catch(e=>alert(e.message||'Gagal memuat kursus'))};
+  g('course-prev').onclick=()=>loadCourseList(courseSearchPage-1).catch(e=>alert(e.message||'Gagal memuat kursus'));
+  g('course-next').onclick=()=>loadCourseList(courseSearchPage+1).catch(e=>alert(e.message||'Gagal memuat kursus'));
+  $.querySelectorAll('[data-course-card]').forEach(el=>{
+    const start=async()=>{showCatLoading();try{await course(el.dataset.courseCard)}catch(e){alert(e.message||'Gagal membuka pelajaran')}finally{hideCatLoading()}};
+    el.onclick=e=>{if(e.target.closest('[data-course-menu]'))return;start()};
+    el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){if(e.target.closest('[data-course-menu]'))return;e.preventDefault();start()}};
+  });
+  $.querySelectorAll('[data-course-menu]').forEach(btn=>btn.onclick=e=>{e.stopPropagation();const item=items.find(c=>String(c.id)===btn.dataset.courseMenu);if(item)showCourseMenu(item)});
+}
+function showCourseMenu(item){
+  document.getElementById('course-menu-backdrop')?.remove();
+  const backdrop=document.createElement('div');
+  backdrop.className='course-menu-backdrop';backdrop.id='course-menu-backdrop';
+  backdrop.innerHTML=`<section class="course-menu-sheet" role="dialog" aria-modal="true" aria-labelledby="course-menu-heading">
+    <div class="course-menu-grab"></div><h2 class="course-menu-title" id="course-menu-heading">${esc(item.title)}</h2>
+    <button type="button" class="course-menu-action" data-action="pin">${item.pinned?'📌  Lepas sematan':'📌  Sematkan kursus'}</button>
+    <button type="button" class="course-menu-action" data-action="rename">✏️  Ubah nama</button>
+    <button type="button" class="course-menu-action danger" data-action="delete">🗑️  Hapus kursus</button>
+  </section>`;
+  document.body.appendChild(backdrop);
+  const close=()=>{backdrop.classList.remove('open');setTimeout(()=>backdrop.remove(),190)};
+  backdrop.addEventListener('click',e=>{if(e.target===backdrop)close()});
+  backdrop.querySelector('.course-menu-sheet').addEventListener('click',e=>e.stopPropagation());
+  requestAnimationFrame(()=>backdrop.classList.add('open'));
+  backdrop.querySelector('[data-action="pin"]').onclick=async()=>{
+    try{await api('/courses/'+encodeURIComponent(item.id),{pinned:!item.pinned},'PATCH');close();await loadCourseList(courseSearchPage)}
+    catch(e){alert(e.message||'Gagal mengubah sematan')}
+  };
+  backdrop.querySelector('[data-action="rename"]').onclick=async()=>{
+    const value=prompt('Nama kursus (1–200 karakter):',item.title);
+    if(value===null){close();return}
+    const title=value.trim();
+    if(!title||title.length>200){alert('Judul harus 1–200 karakter');return}
+    try{await api('/courses/'+encodeURIComponent(item.id),{title},'PATCH');close();await loadCourseList(courseSearchPage)}
+    catch(e){alert(e.message||'Gagal mengubah nama kursus')}
+  };
+  backdrop.querySelector('[data-action="delete"]').onclick=async()=>{
+    if(!confirm('Hapus kursus "'+item.title+'"? Semua pelajaran, jawaban, dan riwayat tanya tutor kursus ini akan ikut terhapus. XP dan streak kamu tidak berkurang.'))return;
+    try{await api('/courses/'+encodeURIComponent(item.id),null,'DELETE');close();await loadCourseList(courseSearchPage)}
+    catch(e){alert(e.message||'Gagal menghapus kursus')}
+  };
+}
 async function learn(){
   setNav('learn');
-  const cs=await api('/courses');
-  $.innerHTML=`<div class="page"><h1 class="page-title">Dari KANDI Jadi PANDAI</h1><button class="btn btn-ghost learn-back" id="learn-back">${IC.back} KEMBALI</button>
-  ${cs.length?cs.map(c=>{const pct=c.total?Math.round(c.done/c.total*100):0;return `<div class="card" data-id="${c.id}" role="button" tabindex="0" style="cursor:pointer"><b>${esc(c.title)}</b><div class="pbar-track"><i style="width:${pct}%"></i></div><small class="muted">${esc(c.done)}/${esc(c.total)} pelajaran</small></div>`}).join(''):`<p class="muted c" style="margin-top:40px">Belum ada kursus.<br>Buat lewat tab <b>Buat</b>!</p>`}</div>`;
-  g('learn-back').onclick=()=>{if(history.length>1)history.back();else setNav('create')};
-  $.querySelectorAll('[data-id]').forEach(el=>{
-    const start=async()=>{showCatLoading();try{await course(el.dataset.id)}catch(e){alert(e.message||'Gagal membuka pelajaran')}finally{hideCatLoading()}};
-    el.onclick=start;el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();start()}};
-  });
+  courseSearchQuery='';courseSearchPage=1;clearTimeout(courseSearchTimer);
+  $.innerHTML='<div class="page"><h1 class="page-title">Dari KANDI Jadi PANDAI</h1><p class="muted c">Memuat kursus...</p></div>';
+  await loadCourseList(1);
 }
 function createScr(){
   setNav('create');
