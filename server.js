@@ -82,8 +82,67 @@ app.post('/api/login',wrap(async(q,s)=>{
 
 // ---------- Course / roadmap ----------
 app.get('/api/courses',auth,wrap(async(q,s)=>{
-  const [r]=await pool.query('SELECT c.id,c.title,COUNT(l.id) total,COUNT(l.completed_at) done FROM courses c LEFT JOIN lessons l ON l.course_id=c.id WHERE c.user_id=? GROUP BY c.id ORDER BY c.id DESC',[q.uid]);
-  s.json(r);
+  const qText=String(q.query.q||'').trim().slice(0,200);
+  const pageRaw=Number.parseInt(q.query.page,10);
+  const page=Number.isFinite(pageRaw)&&pageRaw>0?pageRaw:1;
+  const limit=10,offset=(page-1)*limit;
+  const escaped=qText.replace(/!/g,'!!').replace(/%/g,'!%').replace(/_/g,'!_');
+  const where=qText?" AND c.title LIKE ? ESCAPE '!'":'';
+  const params=qText?[q.uid,'%'+escaped+'%']:[q.uid];
+  const [[countRow]]=await pool.query('SELECT COUNT(*) AS total FROM courses c WHERE c.user_id=?'+where,params);
+  const total=Number(countRow.total)||0;
+  const pages=Math.max(1,Math.ceil(total/limit));
+  const currentPage=Math.min(page,pages);
+  const offsetSafe=(currentPage-1)*limit;
+  const [items]=await pool.query(
+    'SELECT c.id,c.title,c.pinned,c.pinned_at,COUNT(l.id) AS total,COUNT(l.completed_at) AS done FROM courses c LEFT JOIN lessons l ON l.course_id=c.id WHERE c.user_id=?'+where+' GROUP BY c.id ORDER BY c.pinned DESC,c.pinned_at DESC,c.id DESC LIMIT ? OFFSET ?',
+    [...params,limit,offsetSafe]
+  );
+  s.json({items:items.map(c=>({...c,id:Number(c.id),pinned:!!c.pinned,total:Number(c.total)||0,done:Number(c.done)||0})),total,page:currentPage,pages});
+}));
+app.patch('/api/courses/:id',auth,wrap(async(q,s)=>{
+  const id=Number(q.params.id);
+  if(!Number.isSafeInteger(id)||id<1)return s.status(400).json({error:'ID kursus tidak valid'});
+  const hasTitle=Object.prototype.hasOwnProperty.call(q.body||{},'title');
+  const hasPinned=Object.prototype.hasOwnProperty.call(q.body||{},'pinned');
+  if(!hasTitle&&!hasPinned)return s.status(400).json({error:'Tidak ada perubahan'});
+  let title;
+  if(hasTitle){
+    title=String(q.body.title??'').trim();
+    if(title.length<1||title.length>200)return s.status(400).json({error:'Judul harus 1–200 karakter'});
+  }
+  if(hasPinned&&typeof q.body.pinned!=='boolean')return s.status(400).json({error:'Status sematan tidak valid'});
+  const [[owned]]=await pool.query('SELECT id,pinned FROM courses WHERE id=? AND user_id=?',[id,q.uid]);
+  if(!owned)return s.status(404).json({error:'Kursus tidak ditemukan'});
+  if(hasPinned&&q.body.pinned&&!Boolean(owned.pinned)){
+    const conn=await pool.getConnection();
+    try{
+      await conn.beginTransaction();
+      await conn.query('SELECT id FROM users WHERE id=? FOR UPDATE',[q.uid]);
+      const [[row]]=await conn.query('SELECT COUNT(*) AS total FROM courses WHERE user_id=? AND pinned=1',[q.uid]);
+      if(Number(row.total)>=3){await conn.rollback();return s.status(409).json({error:'Maksimal 3 kursus bisa disematkan'});}
+      const sets=[],values=[];
+      if(hasTitle){sets.push('title=?');values.push(title)}
+      sets.push('pinned=1','pinned_at=NOW()');
+      values.push(id,q.uid);
+      await conn.query('UPDATE courses SET '+sets.join(',')+' WHERE id=? AND user_id=?',values);
+      await conn.commit();
+    }catch(e){await conn.rollback();throw e}finally{conn.release()}
+  }else{
+    const sets=[],values=[];
+    if(hasTitle){sets.push('title=?');values.push(title)}
+    if(hasPinned){sets.push('pinned=?');values.push(q.body.pinned?1:0);if(q.body.pinned)sets.push('pinned_at=COALESCE(pinned_at,NOW())');else sets.push('pinned_at=NULL')}
+    if(sets.length){values.push(id,q.uid);await pool.query('UPDATE courses SET '+sets.join(',')+' WHERE id=? AND user_id=?',values)}
+  }
+  const [[updated]]=await pool.query('SELECT id,title,pinned,pinned_at FROM courses WHERE id=? AND user_id=?',[id,q.uid]);
+  s.json({...updated,id:Number(updated.id),pinned:!!updated.pinned});
+}));
+app.delete('/api/courses/:id',auth,wrap(async(q,s)=>{
+  const id=Number(q.params.id);
+  if(!Number.isSafeInteger(id)||id<1)return s.status(400).json({error:'ID kursus tidak valid'});
+  const [result]=await pool.query('DELETE FROM courses WHERE id=? AND user_id=?',[id,q.uid]);
+  if(!result.affectedRows)return s.status(404).json({error:'Kursus tidak ditemukan'});
+  s.json({ok:true});
 }));
 app.post('/api/courses',auth,wrap(async(q,s)=>{
   const p=String(q.body.prompt||'').trim().slice(0,300);
